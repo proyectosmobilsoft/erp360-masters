@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Valores por defecto para Supabase
-const supabaseUrl = 'https://rydxryyigwntlkfeptdd.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ5ZHhyeXlpZ3dudGxrZmVwdGRkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMzA2MjEsImV4cCI6MjA3MTgwNjYyMX0.Xy5L7NRf0pwzM3wqZOrekLpYY8EJzBAKWytPIDxQKyA';
+const supabaseUrl = 'https://vxloknngtzzrbsovhckj.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ4bG9rbm5ndHp6cmJzb3ZoY2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM4MjE3NTksImV4cCI6MjA2OTM5Nzc1OX0.dirzx1V9aXrx0xsauZrML2dLDAzhMUIpmzZHGDMRYYo';
 
 // Solo usar variables de entorno si están disponibles (en el navegador)
 let finalSupabaseUrl = supabaseUrl;
