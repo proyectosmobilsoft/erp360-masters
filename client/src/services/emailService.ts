@@ -270,7 +270,7 @@ class EmailService {
 
     try {
       // Usar Supabase Edge Functions para enviar email
-      const { data, error } = await supabase.functions.invoke('smooth-responder', {
+      const { data, error } = await supabase.functions.invoke('send-email', {
         body: {
           to: emailData.to,
           subject: emailData.subject,

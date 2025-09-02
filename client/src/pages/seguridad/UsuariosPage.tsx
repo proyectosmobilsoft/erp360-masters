@@ -269,7 +269,7 @@ const UsuariosPage = () => {
     mutationFn: async (id: number) => {
       startLoading();
       try {
-        return await usuariosService.deleteUsuario(id);
+        return await usuariosService.deleteUsuarioPermanent(id);
       } finally {
         stopLoading();
       }

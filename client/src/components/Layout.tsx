@@ -15,26 +15,6 @@ const Layout = () => {
     setSidebarOpen(false);
   }, [location.pathname]);
 
-  // Función para obtener el título del módulo basado en la ruta
-  const getModuleTitle = (pathname: string) => {
-    if (pathname === '/') return { title: 'Dashboard del Sistema', icon: <Activity /> };
-    if (pathname.startsWith('/seguridad')) return { title: 'Módulo de Seguridad', icon: <Shield /> };
-    if (pathname.startsWith('/admin')) return { title: 'Módulo de Administración', icon: <Building /> };
-    if (pathname.startsWith('/compras')) return { title: 'Módulo de Compras', icon: <Package /> };
-    if (pathname.startsWith('/inventario')) return { title: 'Módulo de Inventario', icon: <Package /> };
-    if (pathname.startsWith('/maestros')) return { title: 'Módulo de Maestros', icon: <BookOpen /> };
-    if (pathname.startsWith('/presupuesto')) return { title: 'Módulo de Presupuesto', icon: <Calculator /> };
-    if (pathname.startsWith('/ventas')) return { title: 'Módulo de Ventas', icon: <TrendingUp /> };
-    if (pathname.startsWith('/contabilidad')) return { title: 'Módulo de Contabilidad', icon: <FileText /> };
-    if (pathname.startsWith('/recursos-humanos')) return { title: 'Módulo de Recursos Humanos', icon: <UserCheck /> };
-    
-    // Para rutas específicas de seguridad
-    if (pathname.includes('/usuarios')) return { title: 'Gestión de Usuarios', icon: <Users /> };
-    if (pathname.includes('/perfiles')) return { title: 'Gestión de Perfiles', icon: <Key /> };
-    if (pathname.includes('/permisos')) return { title: 'Gestión de Permisos', icon: <Lock /> };
-    
-    return { title: 'Sistema de Gestión', icon: <Building /> };
-  };
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -69,15 +49,15 @@ const Layout = () => {
               {sidebarOpen ? 'Cerrar Menú' : 'Abrir Menú'}
             </Button>
           </div>
-          
+
           {/* Header del módulo */}
           <div className="module-header">
             <h1 className="module-title font-extrabold text-cyan-800">
-              <span className="module-icon">{getModuleTitle(location.pathname).icon}</span>
-              {getModuleTitle(location.pathname).title}
+              <span className="module-icon"><Package /></span>
+              Módulo de Gestión
             </h1>
           </div>
-          
+
           <Outlet />
         </main>
       </div>

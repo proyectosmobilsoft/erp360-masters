@@ -553,7 +553,7 @@ const PermisosPage: React.FC = () => {
                                             size="icon"
                                             aria-label="Inactivar módulo"
                                           >
-                                            <Pause className="h-5 w-5 text-orange-600 hover:text-orange-800 transition-colors" />
+                                            <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
                                           </Button>
                                         </AlertDialogTrigger>
                                       </TooltipTrigger>
@@ -575,7 +575,6 @@ const PermisosPage: React.FC = () => {
                                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                       <AlertDialogAction
                                         onClick={() => handleToggleEstado(modulo)}
-                                        className="bg-orange-600 hover:bg-orange-700"
                                       >
                                         Inactivar
                                       </AlertDialogAction>
