@@ -189,6 +189,7 @@ const PermisosPage: React.FC = () => {
   const handleCrearPermisoModal = async (data: PermisoForm) => {
     try {
       startLoading();
+      
       // Crear el nuevo permiso
       await createModuloPermiso({
         ...data,
@@ -202,21 +203,23 @@ const PermisosPage: React.FC = () => {
         activo: true,
         modulo_id: moduloParaConfigurar?.id || 0,
       };
-      // setPermisosDisponibles(prev => [...prev, nuevoPermiso]); // Eliminado
       
       // Agregar el nuevo permiso a la lista del módulo
       setPermisosDelModulo(prev => [...prev, nuevoPermiso]);
-      
+
+      // Mostrar mensaje de éxito
       toast({
-        title: 'Permiso creado',
-        description: 'El nuevo permiso se creó exitosamente.',
+        title: '✅ Éxito',
+        description: 'Permiso creado correctamente',
+        variant: 'default',
       });
 
       // Solo resetear el formulario, mantener el modal abierto
       permisoForm.reset();
     } catch (error: any) {
+      // Mostrar mensaje de error
       toast({
-        title: 'Error',
+        title: '❌ Error',
         description: error?.message || 'No se pudo crear el permiso',
         variant: 'destructive',
       });

@@ -155,20 +155,10 @@ export const useModulos = () => {
 
   const createModuloPermisoMutation = useMutation({
     mutationFn: async (data: CreateModuloPermisoData) => {
-      startLoading();
-      try {
-        return await modulosService.createModuloPermiso(data);
-      } finally {
-        stopLoading();
-      }
+      return await modulosService.createModuloPermiso(data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['modulos-con-permisos'] });
-      toast({
-        title: '✅ Éxito',
-        description: 'Permiso creado correctamente',
-        variant: 'default',
-      });
     },
     onError: (error: Error) => {
       toast({
@@ -248,9 +238,9 @@ export const useModulos = () => {
     activateModulo: activateModuloMutation.mutate,
     deactivateModulo: deactivateModuloMutation.mutate,
     deleteModulo: deleteModuloMutation.mutate,
-    createModuloPermiso: createModuloPermisoMutation.mutate,
-    updateModuloPermiso: updateModuloPermisoMutation.mutate,
-    deleteModuloPermiso: deleteModuloPermisoMutation.mutate,
+    createModuloPermiso: createModuloPermisoMutation.mutateAsync,
+    updateModuloPermiso: updateModuloPermisoMutation.mutateAsync,
+    deleteModuloPermiso: deleteModuloPermisoMutation.mutateAsync,
 
     // Mutation states
     isCreating: createModuloMutation.isPending,

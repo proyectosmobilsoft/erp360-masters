@@ -14,6 +14,7 @@ import {
   Shield,
   Key,
   Lock,
+  MapPin,
 } from 'lucide-react';
 
 const menuItems = [
@@ -21,6 +22,12 @@ const menuItems = [
     title: "Dashboard",
     icon: <Activity className="h-5 w-5" />,
     path: "/dashboard",
+    subItems: [],
+  },
+  {
+    title: "Zonas",
+    icon: <MapPin className="h-5 w-5" />,
+    path: "/zonas",
     subItems: [],
   },
   {

@@ -54,7 +54,7 @@ const Layout = () => {
           <div className="module-header">
             <h1 className="module-title font-extrabold text-cyan-800">
               <span className="module-icon"><Package /></span>
-              Módulo de Gestión
+              Módulo de Maestros
             </h1>
           </div>
 
