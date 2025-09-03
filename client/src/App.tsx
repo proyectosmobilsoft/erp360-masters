@@ -18,6 +18,7 @@ import UsuariosPage from './pages/seguridad/UsuariosPage';
 import CrearUsuarioPage from './pages/seguridad/CrearUsuarioPage';
 import EditarUsuarioPage from './pages/seguridad/EditarUsuarioPage';
 import PerfilesPage from './pages/seguridad/PerfilesPage';
+import UnidadServiciosPage from './pages/seguridad/UnidadServiciosPage';
 import ZonasPage from './pages/seguridad/ZonasPage';
 
 import GestionPermisosPage from './pages/seguridad/GestionPermisosPage';
@@ -54,6 +55,9 @@ function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Index />} />
+            
+            {/* Rutas de unidad servicios */}
+            <Route path="/unidad-servicios" element={<UnidadServiciosPage />} />
             
             {/* Rutas de zonas */}
             <Route path="/zonas" element={<ZonasPage />} />

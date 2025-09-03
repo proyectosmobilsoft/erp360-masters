@@ -217,10 +217,22 @@ const PermisosPage: React.FC = () => {
       // Solo resetear el formulario, mantener el modal abierto
       permisoForm.reset();
     } catch (error: any) {
-      // Mostrar mensaje de error
+      // Mostrar mensaje de error específico
+      let errorMessage = 'No se pudo crear el permiso';
+      
+      if (error?.message) {
+        if (error.message.includes('duplicate key value violates unique constraint')) {
+          errorMessage = 'El código del permiso ya existe. Por favor, elige un código diferente.';
+        } else if (error.message.includes('ya existe')) {
+          errorMessage = error.message;
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
         title: '❌ Error',
-        description: error?.message || 'No se pudo crear el permiso',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

@@ -162,6 +162,21 @@ export const modulosService = {
   },
 
   async createModuloPermiso(permisoData: CreateModuloPermisoData): Promise<ModuloPermiso> {
+    // Verificar si el código ya existe
+    const { data: existingPermiso, error: checkError } = await supabase
+      .from('gen_modulo_permisos')
+      .select('id, code')
+      .eq('code', permisoData.code)
+      .single();
+    
+    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw checkError;
+    }
+    
+    if (existingPermiso) {
+      throw new Error(`El código '${permisoData.code}' ya existe. Por favor, elige un código diferente.`);
+    }
+    
     const { data, error } = await supabase
       .from('gen_modulo_permisos')
       .insert([{ ...permisoData, activo: true }])

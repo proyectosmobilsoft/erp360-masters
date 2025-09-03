@@ -14,7 +14,10 @@ import { Can } from '@/contexts/PermissionsContext';
 const permisoSchema = z.object({
   nombre: z.string().min(1, 'El nombre es requerido'),
   descripcion: z.string().optional(),
-  code: z.string().min(1, 'El código es requerido'),
+  code: z.string()
+    .min(1, 'El código es requerido')
+    .regex(/^[a-z0-9_-]+$/, 'El código solo puede contener letras minúsculas, números, guiones y guiones bajos')
+    .max(50, 'El código no puede exceder 50 caracteres'),
 });
 
 type PermisoFormData = z.infer<typeof permisoSchema>;
@@ -40,6 +43,15 @@ export const PermisoForm: React.FC<PermisoFormProps> = ({
     addAction('guardar', 'Guardar Permiso');
     addAction('cancelar', 'Cancelar');
   }, [addAction]);
+
+  // Función para generar código automáticamente
+  const generateCode = (nombre: string) => {
+    return nombre
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '') // Remover caracteres especiales
+      .replace(/\s+/g, '_') // Reemplazar espacios con guiones bajos
+      .substring(0, 50); // Limitar a 50 caracteres
+  };
 
   const form = useForm<PermisoFormData>({
     resolver: zodResolver(permisoSchema),
@@ -98,13 +110,37 @@ export const PermisoForm: React.FC<PermisoFormProps> = ({
                 <FormItem>
                   <FormLabel>Código *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ingrese el código del permiso (ej: usuarios_view)"
-                      disabled={isLoading}
-                    />
+                    <div className="flex space-x-2">
+                      <Input
+                        {...field}
+                        placeholder="Ingrese el código del permiso (ej: usuarios_view)"
+                        disabled={isLoading}
+                        className="flex-1"
+                      />
+                      {!permiso && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const nombre = form.getValues('nombre');
+                            if (nombre) {
+                              const generatedCode = generateCode(nombre);
+                              form.setValue('code', generatedCode);
+                            }
+                          }}
+                          disabled={isLoading || !form.watch('nombre')}
+                          title="Generar código automáticamente basado en el nombre"
+                        >
+                          Auto
+                        </Button>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
+                  <p className="text-sm text-muted-foreground">
+                    Solo letras minúsculas, números, guiones y guiones bajos. Máximo 50 caracteres.
+                  </p>
                 </FormItem>
               )}
             />

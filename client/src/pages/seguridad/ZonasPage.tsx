@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Search, MapPin, Save, RefreshCw, Loader2, Lock, CheckCircle, Building, ImagePlus } from "lucide-react";
+import { Edit, Trash2, Plus, Search, MapPin, Save, RefreshCw, Loader2, Lock, CheckCircle, Building, ImagePlus, ChevronDown, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,19 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { 
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { 
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { 
   Dialog, 
   DialogContent, 
@@ -691,6 +704,8 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
     unidadesServicio: [],
   });
 
+  const [open, setOpen] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
@@ -798,29 +813,55 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                 </div>
               </TableCell>
               <TableCell className="py-2">
-                <Select 
-                  value={formData.unidadServicioId > 0 ? formData.unidadServicioId.toString() : ""} 
-                  onValueChange={(value) => {
-                    const unidadId = parseInt(value);
-                    handleInputChange('unidadServicioId', unidadId);
-                    // Actualizar el No PPL con el valor de la unidad seleccionada
-                    const unidad = unidadesServicio.find(u => u.id === unidadId);
-                    if (unidad) {
-                      handleInputChange('no_ppl', unidad.no_ppl || 0);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unidadesServicio.map((unidad) => (
-                      <SelectItem key={unidad.id} value={unidad.id?.toString() || ""}>
-                        {unidad.nombre_servicio} - {unidad.gen_municipios?.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={open} onOpenChange={setOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={open}
+                      className="h-8 w-full justify-between text-sm"
+                    >
+                      {formData.unidadServicioId
+                        ? unidadesServicio.find((unidad) => unidad.id === formData.unidadServicioId)?.nombre_servicio
+                        : "Seleccionar unidad..."}
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar unidad de servicio..." />
+                      <CommandList>
+                        <CommandEmpty>No se encontraron unidades.</CommandEmpty>
+                        <CommandGroup>
+                          {unidadesServicio.map((unidad) => (
+                            <CommandItem
+                              key={unidad.id}
+                              value={`${unidad.nombre_servicio} ${unidad.gen_municipios?.nombre}`}
+                              onSelect={() => {
+                                handleInputChange('unidadServicioId', unidad.id || 0);
+                                // Actualizar el No PPL con el valor de la unidad seleccionada
+                                if (unidad) {
+                                  handleInputChange('no_ppl', unidad.no_ppl || 0);
+                                }
+                                setOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={`mr-2 h-4 w-4 ${
+                                  formData.unidadServicioId === unidad.id ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{unidad.nombre_servicio}</span>
+                                <span className="text-xs text-gray-500">{unidad.gen_municipios?.nombre}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </TableCell>
               <TableCell className="py-2">
                 <div className="h-8 flex items-center px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-700">

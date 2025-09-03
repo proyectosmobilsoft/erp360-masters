@@ -1,0 +1,834 @@
+import React, { useState, useMemo } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Edit, Trash2, Plus, Search, Building2, Save, RefreshCw, Loader2, Lock, CheckCircle, Building, ImagePlus, ChevronDown, ChevronRight, Package, ChefHat } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLoading } from '@/contexts/LoadingContext';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { unidadServiciosService, UnidadServicioData } from '@/services/unidadServiciosService';
+import { Can } from '@/contexts/PermissionsContext';
+import { supabase } from '@/services/supabaseClient';
+
+interface UnidadServicioForm {
+  codigo: string;
+  nombre_servicio: string;
+  id_municipio: number;
+  no_ppl: number;
+}
+
+const UnidadServiciosPage: React.FC = () => {
+  const { toast } = useToast();
+  const { startLoading, stopLoading } = useLoading();
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState("unidades");
+  const [editingUnidad, setEditingUnidad] = useState<UnidadServicioData | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+
+  // Consulta de unidades de servicio
+  const { data: unidadesServicio = [], isLoading } = useQuery({
+    queryKey: ['unidades-servicio'],
+    queryFn: unidadServiciosService.listUnidadesServicio,
+  });
+
+  // Consulta de municipios
+  const { data: municipios = [] } = useQuery({
+    queryKey: ['municipios'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('gen_municipios')
+        .select('id, nombre')
+        .order('nombre');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Mutación para crear unidad de servicio
+  const createUnidadServicioMutation = useMutation({
+    mutationFn: async (data: UnidadServicioForm) => {
+      startLoading();
+      try {
+        const unidadData: UnidadServicioData = {
+          codigo: parseInt(data.codigo),
+          nombre_servicio: data.nombre_servicio,
+          id_municipio: data.id_municipio,
+          no_ppl: data.no_ppl,
+          activo: true
+        };
+        
+        return await unidadServiciosService.createUnidadServicio(unidadData);
+      } finally {
+        stopLoading();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Unidad de servicio creada",
+        description: "La unidad de servicio ha sido creada exitosamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+      setActiveTab("unidades");
+      setEditingUnidad(null);
+    },
+    onError: (error: any) => {
+      console.error('❌ Error creando unidad de servicio:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al crear la unidad de servicio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutación para actualizar unidad de servicio
+  const updateUnidadServicioMutation = useMutation({
+    mutationFn: async (data: UnidadServicioForm & { id: number }) => {
+      startLoading();
+      try {
+        const unidadData: Partial<UnidadServicioData> = {
+          codigo: parseInt(data.codigo),
+          nombre_servicio: data.nombre_servicio,
+          id_municipio: data.id_municipio,
+          no_ppl: data.no_ppl,
+        };
+        
+        return await unidadServiciosService.updateUnidadServicio(data.id, unidadData);
+      } finally {
+        stopLoading();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Unidad de servicio actualizada",
+        description: "La unidad de servicio ha sido actualizada exitosamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+      setActiveTab("unidades");
+      setEditingUnidad(null);
+    },
+    onError: (error: any) => {
+      console.error('❌ Error actualizando unidad de servicio:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Error al actualizar la unidad de servicio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutación para activar unidad de servicio
+  const activateUnidadServicioMutation = useMutation({
+    mutationFn: async (id: number) => {
+      startLoading();
+      try {
+        return await unidadServiciosService.activateUnidadServicio(id);
+      } finally {
+        stopLoading();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Unidad de servicio activada",
+        description: "La unidad de servicio ha sido activada exitosamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Error activando unidad de servicio:', error);
+      toast({
+        title: "Error al activar unidad de servicio",
+        description: error.message || "Hubo un error al activar la unidad de servicio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutación para inactivar unidad de servicio
+  const deactivateUnidadServicioMutation = useMutation({
+    mutationFn: async (id: number) => {
+      startLoading();
+      try {
+        return await unidadServiciosService.deactivateUnidadServicio(id);
+      } finally {
+        stopLoading();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Unidad de servicio desactivada",
+        description: "La unidad de servicio ha sido desactivada exitosamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Error inactivando unidad de servicio:', error);
+      toast({
+        title: "Error al desactivar unidad de servicio",
+        description: error.message || "Hubo un error al desactivar la unidad de servicio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutación para eliminar unidad de servicio
+  const deleteUnidadServicioMutation = useMutation({
+    mutationFn: async (id: number) => {
+      startLoading();
+      try {
+        return await unidadServiciosService.deleteUnidadServicioPermanent(id);
+      } finally {
+        stopLoading();
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Unidad de servicio eliminada",
+        description: "La unidad de servicio ha sido eliminada exitosamente",
+      });
+      queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+    },
+    onError: (error: any) => {
+      console.error('❌ Error eliminando unidad de servicio:', error);
+      toast({
+        title: "Error al eliminar unidad de servicio",
+        description: error.message || "Hubo un error al eliminar la unidad de servicio",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Filtros
+  const unidadesFiltradas = useMemo(() => {
+    let filtered = unidadesServicio;
+
+    if (searchTerm) {
+      filtered = filtered.filter(unidad =>
+        unidad.nombre_servicio.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        unidad.codigo?.toString().includes(searchTerm) ||
+        unidad.gen_municipios?.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (statusFilter === "active") {
+      filtered = filtered.filter(unidad => unidad.activo);
+    } else if (statusFilter === "inactive") {
+      filtered = filtered.filter(unidad => !unidad.activo);
+    }
+
+    return filtered;
+  }, [unidadesServicio, searchTerm, statusFilter]);
+
+  // Handlers
+  const handleEliminarUnidad = async (id: number) => {
+    deleteUnidadServicioMutation.mutate(id);
+  };
+
+  const handleActivarUnidad = async (id: number) => {
+    activateUnidadServicioMutation.mutate(id);
+  };
+
+  const handleInactivarUnidad = async (id: number) => {
+    deactivateUnidadServicioMutation.mutate(id);
+  };
+
+  const handleEditarUnidad = (unidad: UnidadServicioData) => {
+    setEditingUnidad(unidad);
+    setActiveTab("registro");
+  };
+
+  const handleCrearUnidad = () => {
+    setEditingUnidad(null);
+    setActiveTab("registro");
+  };
+
+  const onSubmit = (data: UnidadServicioForm) => {
+    if (editingUnidad) {
+      updateUnidadServicioMutation.mutate({ ...data, id: editingUnidad.id! });
+    } else {
+      createUnidadServicioMutation.mutate(data);
+    }
+  };
+
+  return (
+    <div className="p-4 max-w-full mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+          <Building2 className="w-8 h-8 text-cyan-600" />
+          Gestión de Unidad Servicios
+        </h1>
+      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-cyan-100/60 p-1 rounded-lg">
+          <TabsTrigger
+            value="unidades"
+            className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+          >
+            Listado de Unidad Servicios
+          </TabsTrigger>
+          <TabsTrigger
+            value="registro"
+            className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+          >
+            Registro de Unidad Servicio
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="unidades" className="mt-6">
+          {/* Header similar a perfiles */}
+          <div className="bg-white rounded-lg border">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
+                  <Building2 className="w-5 h-5 text-orange-600" />
+                </div>
+                <span className="text-lg font-semibold text-gray-700">UNIDAD SERVICIOS</span>
+              </div>
+              <div className="flex space-x-2">
+                <Can action="accion-crear-unidad-servicio">
+                  <Button
+                    onClick={handleCrearUnidad}
+                    className="bg-brand-lime hover:bg-brand-lime/90"
+                    size="sm"
+                  >
+                    Adicionar Registro
+                  </Button>
+                </Can>
+              </div>
+            </div>
+
+            {/* Filtros y búsqueda */}
+            <div className="flex flex-wrap items-center gap-4 p-3 bg-cyan-50 rounded-lg mb-4 shadow-sm">
+              <div className="flex-1 min-w-[200px]">
+                <Input
+                  placeholder="Buscar por nombre, código o municipio..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div className="min-w-[180px]">
+                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="active">Solo activos</SelectItem>
+                    <SelectItem value="inactive">Solo inactivos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Tabla de unidades de servicio */}
+            <div className="relative overflow-x-auto rounded-lg shadow-sm">
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="animate-spin h-10 w-10 text-cyan-600" />
+                    <span className="text-cyan-700 font-semibold">Cargando unidades de servicio...</span>
+                  </div>
+                </div>
+              )}
+              <Table className="min-w-[900px] w-full text-xs">
+                <TableHeader className="bg-cyan-50">
+                  <TableRow className="text-left font-semibold text-gray-700">
+                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
+                    <TableHead className="px-4 py-3">Código</TableHead>
+                    <TableHead className="px-4 py-3">Nombre del Servicio</TableHead>
+                    <TableHead className="px-4 py-3">Municipio</TableHead>
+                    <TableHead className="px-4 py-3">No. PPL</TableHead>
+                    <TableHead className="px-4 py-3">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {!isLoading && (unidadesFiltradas.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        No hay unidades de servicio disponibles.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    unidadesFiltradas.map((unidad) => (
+                      <TableRow key={unidad.id} className="hover:bg-gray-50">
+                        <TableCell className="px-2 py-1">
+                          <div className="flex flex-row gap-1 items-center">
+                            <Can action="accion-editar-unidad-servicio">
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleEditarUnidad(unidad)}
+                                      aria-label="Editar unidad de servicio"
+                                    >
+                                      <Edit className="h-5 w-5 text-cyan-600 hover:text-cyan-800 transition-colors" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Editar</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </Can>
+
+                            {unidad.activo ? (
+                              <Can action="accion-inactivar-unidad-servicio">
+                                <AlertDialog>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <AlertDialogTrigger asChild>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            aria-label="Inactivar unidad de servicio"
+                                          >
+                                            <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Inactivar</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>¿Inactivar unidad de servicio?</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        ¿Estás seguro de que deseas inactivar la unidad de servicio{" "}
+                                        <strong>{unidad.nombre_servicio}</strong>?
+                                        La unidad no podrá ser usada hasta que sea reactivada.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => handleInactivarUnidad(unidad.id!)}
+                                        className="bg-yellow-600 hover:bg-yellow-700"
+                                      >
+                                        Inactivar
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </Can>
+                            ) : (
+                              <>
+                                <Can action="accion-activar-unidad-servicio">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Activar unidad de servicio"
+                                            >
+                                              <CheckCircle className="h-5 w-5 text-brand-lime hover:text-brand-lime/80 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Activar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Activar unidad de servicio?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          ¿Estás seguro de que deseas activar la unidad de servicio{" "}
+                                          <strong>{unidad.nombre_servicio}</strong>?
+                                          La unidad podrá ser usada nuevamente.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleActivarUnidad(unidad.id!)}
+                                          className="bg-brand-lime hover:bg-brand-lime/90"
+                                        >
+                                          Activar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                                <Can action="accion-eliminar-unidad-servicio">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Eliminar unidad de servicio"
+                                            >
+                                              <Trash2 className="h-5 w-5 text-rose-600 hover:text-rose-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Eliminar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Eliminar unidad de servicio?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          ¿Estás seguro de que deseas eliminar permanentemente la unidad de servicio{" "}
+                                          <strong>{unidad.nombre_servicio}</strong>?
+                                          Esta acción no se puede deshacer.
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleEliminarUnidad(unidad.id!)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          Eliminar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium">
+                          {unidad.codigo}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                          {unidad.nombre_servicio}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                          {unidad.gen_municipios?.nombre || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                          {unidad.no_ppl || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          <Badge
+                            variant={unidad.activo ? "default" : "secondary"}
+                            className={
+                              unidad.activo
+                                ? "bg-brand-lime/10 text-brand-lime"
+                                : "bg-gray-100 text-gray-800"
+                            }
+                          >
+                            {unidad.activo ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="registro" className="mt-6">
+          <UnidadServicioForm
+            onSubmit={onSubmit}
+            editingUnidad={editingUnidad}
+            municipios={municipios}
+            isLoading={isLoading}
+            onCancel={() => {
+              setActiveTab("unidades");
+              setEditingUnidad(null);
+            }}
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+// Componente del formulario
+interface UnidadServicioFormProps {
+  onSubmit: (data: UnidadServicioForm) => void;
+  editingUnidad: UnidadServicioData | null;
+  municipios: Array<{id: number, nombre: string}>;
+  isLoading: boolean;
+  onCancel: () => void;
+}
+
+const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
+  onSubmit,
+  editingUnidad,
+  municipios,
+  isLoading,
+  onCancel
+}) => {
+  const [formData, setFormData] = useState<UnidadServicioForm>({
+    codigo: editingUnidad?.codigo?.toString() || "",
+    nombre_servicio: editingUnidad?.nombre_servicio || "",
+    id_municipio: editingUnidad?.id_municipio || 0,
+    no_ppl: editingUnidad?.no_ppl || 0,
+  });
+
+  // Estado para controlar grupos expandidos/colapsados
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['COCINA']));
+
+  // Datos de ejemplo de bodegas agrupadas
+  const bodegasData = [
+    {
+      grupo: 'ALMACENAJE',
+      total: 2,
+      items: [
+        { codigo: '01', nombre: 'ALMACEN PRINCIPAL - ZONA 13', tipo: 'ALMACENAJE' },
+        { codigo: '05', nombre: 'BODEGA ALMACEN - ERON PENAL', tipo: 'ALMACENAJE' }
+      ]
+    },
+    {
+      grupo: 'COCINA',
+      total: 2,
+      items: [
+        { codigo: '03', nombre: 'COCINA UNIDAD URIS ZONA 13', tipo: 'COCINA' },
+        { codigo: '12', nombre: 'BODEGA COCINA - ERON PENAL', tipo: 'COCINA' }
+      ]
+    }
+  ];
+
+  const toggleGroup = (grupo: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(grupo)) {
+        newSet.delete(grupo);
+      } else {
+        newSet.add(grupo);
+      }
+      return newSet;
+    });
+  };
+
+  const handleInputChange = (field: keyof UnidadServicioForm, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
+
+  return (
+    <div className="bg-white rounded-lg border">
+        <div className="flex items-center gap-2 p-6 border-b">
+          <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+            <Building2 className="w-4 h-4 text-cyan-600" />
+          </div>
+          <span className="text-lg font-semibold text-gray-700">
+            {editingUnidad ? 'EDITAR UNIDAD DE SERVICIO' : 'REGISTRO DE UNIDAD DE SERVICIO'}
+          </span>
+        </div>
+      
+      <div className="p-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Formulario como en la imagen */}
+          <div className="space-y-4 mb-6">
+            {/* Primera fila: Información de la Unidad de Servicio */}
+            <div className="grid grid-cols-6 gap-1">
+              <div className="space-y-1">
+                <Label htmlFor="codigo" className="text-xs">Codigo</Label>
+                <Input
+                  id="codigo"
+                  value={formData.codigo}
+                  onChange={(e) => handleInputChange('codigo', e.target.value)}
+                  className="border-blue-200 w-full h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1 col-span-2">
+                <Label htmlFor="nombre_servicio" className="text-xs">Unidad de Servicio a PPL *</Label>
+                <Input
+                  id="nombre_servicio"
+                  value={formData.nombre_servicio}
+                  onChange={(e) => handleInputChange('nombre_servicio', e.target.value)}
+                  required
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="no_ppl" className="text-xs">No PPL *</Label>
+                <Input
+                  id="no_ppl"
+                  type="number"
+                  value={formData.no_ppl}
+                  onChange={(e) => handleInputChange('no_ppl', parseInt(e.target.value) || 0)}
+                  required
+                  className="w-full h-8 text-xs"
+                />
+              </div>
+
+              <div className="space-y-1 col-span-2">
+                <Label htmlFor="municipio" className="text-xs">Municipio *</Label>
+                <Select
+                  value={formData.id_municipio.toString()}
+                  onValueChange={(value) => handleInputChange('id_municipio', parseInt(value))}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {municipios.map((municipio) => (
+                      <SelectItem key={municipio.id} value={municipio.id.toString()}>
+                        {municipio.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* Sección de bodegas - Solo lectura */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-800">Listado de bodegas de esta unidad</h3>
+            
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader className="bg-cyan-50">
+                  <TableRow>
+                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Codigo</TableHead>
+                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Nombre de la bodega</TableHead>
+                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Tipo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {bodegasData.map((grupo) => (
+                    <React.Fragment key={grupo.grupo}>
+                      {/* Fila del grupo */}
+                      <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-all duration-200">
+                        <TableCell colSpan={3} className="py-1 px-2">
+                          <div 
+                            className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-1 rounded transition-all duration-200 group"
+                            onClick={() => toggleGroup(grupo.grupo)}
+                          >
+                            <div className="flex items-center gap-1">
+                              <div className="transition-transform duration-300 ease-in-out group-hover:scale-110">
+                                {expandedGroups.has(grupo.grupo) ? (
+                                  <ChevronDown className="w-3 h-3 text-cyan-600" />
+                                ) : (
+                                  <ChevronRight className="w-3 h-3 text-cyan-600" />
+                                )}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {grupo.grupo === 'ALMACENAJE' ? (
+                                  <Package className="w-3 h-3 text-blue-600" />
+                                ) : (
+                                  <ChefHat className="w-3 h-3 text-orange-600" />
+                                )}
+                                <span className="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors duration-200 text-xs">
+                                  {grupo.grupo} - Total ({grupo.total})
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+
+                      {/* Items del grupo - Solo se muestran cuando está expandido */}
+                      {expandedGroups.has(grupo.grupo) && grupo.items.map((item, index) => (
+                        <TableRow 
+                          key={`${grupo.grupo}-${index}`} 
+                          className="hover:bg-cyan-50/50 transition-colors duration-200 border-l-2 border-l-transparent hover:border-l-cyan-300"
+                          style={{
+                            animationDelay: `${index * 100}ms`,
+                            animation: 'slideInFromTop 0.3s ease-out forwards'
+                          }}
+                        >
+                          <TableCell className="py-1 px-2 text-xs text-gray-900 font-medium">
+                            <div className="flex items-center gap-1">
+                              <div className="w-5 h-5 bg-cyan-100 rounded-full flex items-center justify-center">
+                                <span className="text-xs font-bold text-cyan-700">{item.codigo}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-1 px-2 text-xs text-gray-900">
+                            {item.nombre}
+                          </TableCell>
+                          <TableCell className="py-1 px-2">
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs px-1 py-0 ${
+                                item.tipo === 'ALMACENAJE' 
+                                  ? 'bg-blue-100 text-blue-700 border-blue-200' 
+                                  : 'bg-orange-100 text-orange-700 border-orange-200'
+                              }`}
+                            >
+                              {item.tipo}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+            >
+              Cancelar
+            </Button>
+            <Can action={editingUnidad ? "accion-editar-unidad-servicio" : "accion-crear-unidad-servicio"}>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="bg-cyan-600 hover:bg-cyan-700 text-white"
+              >
+                {isLoading ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </Can>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default UnidadServiciosPage;
