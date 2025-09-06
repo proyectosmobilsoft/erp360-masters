@@ -31,13 +31,15 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { unidadServiciosService, UnidadServicioData } from '@/services/unidadServiciosService';
+import { useBodegasUnidad } from '@/hooks/useBodegasUnidad';
+import BodegasUnidadTable from '@/components/BodegasUnidadTable';
 import { Can } from '@/contexts/PermissionsContext';
 import { supabase } from '@/services/supabaseClient';
 
 interface UnidadServicioForm {
-  codigo: string;
+  codigo?: string;
   nombre_servicio: string;
-  id_municipio: number;
+  id_sucursal: number;
   no_ppl: number;
 }
 
@@ -56,17 +58,23 @@ const UnidadServiciosPage: React.FC = () => {
     queryFn: unidadServiciosService.listUnidadesServicio,
   });
 
-  // Consulta de municipios
-  const { data: municipios = [] } = useQuery({
-    queryKey: ['municipios'],
+  // Consulta de sucursales
+  const { data: sucursales = [] } = useQuery({
+    queryKey: ['sucursales'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('gen_municipios')
+        .from('gen_sucursales')
         .select('id, nombre')
         .order('nombre');
       if (error) throw error;
       return data;
     },
+  });
+
+  // Consulta de bodegas por unidad de servicio (solo cuando se está editando)
+  const { bodegas: bodegasUnidad } = useBodegasUnidad({ 
+    unidadId: editingUnidad?.id,
+    enabled: !!editingUnidad?.id 
   });
 
   // Mutación para crear unidad de servicio
@@ -75,9 +83,9 @@ const UnidadServiciosPage: React.FC = () => {
       startLoading();
       try {
         const unidadData: UnidadServicioData = {
-          codigo: parseInt(data.codigo),
+          codigo: data.codigo!,
           nombre_servicio: data.nombre_servicio,
-          id_municipio: data.id_municipio,
+          id_sucursal: data.id_sucursal,
           no_ppl: data.no_ppl,
           activo: true
         };
@@ -112,9 +120,9 @@ const UnidadServiciosPage: React.FC = () => {
       startLoading();
       try {
         const unidadData: Partial<UnidadServicioData> = {
-          codigo: parseInt(data.codigo),
+          codigo: data.codigo ? parseInt(data.codigo) : undefined,
           nombre_servicio: data.nombre_servicio,
-          id_municipio: data.id_municipio,
+          id_sucursal: data.id_sucursal,
           no_ppl: data.no_ppl,
         };
         
@@ -231,7 +239,7 @@ const UnidadServiciosPage: React.FC = () => {
       filtered = filtered.filter(unidad =>
         unidad.nombre_servicio.toLowerCase().includes(searchTerm.toLowerCase()) ||
         unidad.codigo?.toString().includes(searchTerm) ||
-        unidad.gen_municipios?.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+        unidad.gen_sucursales?.nombre.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -313,7 +321,7 @@ const UnidadServiciosPage: React.FC = () => {
                 <Can action="accion-crear-unidad-servicio">
                   <Button
                     onClick={handleCrearUnidad}
-                    className="bg-brand-lime hover:bg-brand-lime/90"
+                    className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
                     size="sm"
                   >
                     Adicionar Registro
@@ -326,10 +334,11 @@ const UnidadServiciosPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-4 p-3 bg-cyan-50 rounded-lg mb-4 shadow-sm">
               <div className="flex-1 min-w-[200px]">
                 <Input
-                  placeholder="Buscar por nombre, código o municipio..."
+                  placeholder="Buscar por nombre, código o sucursal..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full"
+                  autoComplete="off"
                 />
               </div>
               <div className="min-w-[180px]">
@@ -362,7 +371,7 @@ const UnidadServiciosPage: React.FC = () => {
                     <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
                     <TableHead className="px-4 py-3">Código</TableHead>
                     <TableHead className="px-4 py-3">Nombre del Servicio</TableHead>
-                    <TableHead className="px-4 py-3">Municipio</TableHead>
+                    <TableHead className="px-4 py-3">Sucursal</TableHead>
                     <TableHead className="px-4 py-3">No. PPL</TableHead>
                     <TableHead className="px-4 py-3">Estado</TableHead>
                   </TableRow>
@@ -536,7 +545,7 @@ const UnidadServiciosPage: React.FC = () => {
                           {unidad.nombre_servicio}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-gray-900">
-                          {unidad.gen_municipios?.nombre || "-"}
+                          {unidad.gen_sucursales?.nombre || "-"}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-gray-900">
                           {unidad.no_ppl || "-"}
@@ -566,8 +575,8 @@ const UnidadServiciosPage: React.FC = () => {
           <UnidadServicioForm
             onSubmit={onSubmit}
             editingUnidad={editingUnidad}
-            municipios={municipios}
-            isLoading={isLoading}
+            sucursales={sucursales}
+            isLoading={createUnidadServicioMutation.isPending || updateUnidadServicioMutation.isPending}
             onCancel={() => {
               setActiveTab("unidades");
               setEditingUnidad(null);
@@ -583,7 +592,7 @@ const UnidadServiciosPage: React.FC = () => {
 interface UnidadServicioFormProps {
   onSubmit: (data: UnidadServicioForm) => void;
   editingUnidad: UnidadServicioData | null;
-  municipios: Array<{id: number, nombre: string}>;
+  sucursales: Array<{id: number, nombre: string}>;
   isLoading: boolean;
   onCancel: () => void;
 }
@@ -591,53 +600,47 @@ interface UnidadServicioFormProps {
 const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
   onSubmit,
   editingUnidad,
-  municipios,
+  sucursales,
   isLoading,
   onCancel
 }) => {
   const [formData, setFormData] = useState<UnidadServicioForm>({
     codigo: editingUnidad?.codigo?.toString() || "",
     nombre_servicio: editingUnidad?.nombre_servicio || "",
-    id_municipio: editingUnidad?.id_municipio || 0,
+    id_sucursal: editingUnidad?.id_sucursal || 0,
     no_ppl: editingUnidad?.no_ppl || 0,
   });
+  const [nextCodigo, setNextCodigo] = useState<string>("");
 
-  // Estado para controlar grupos expandidos/colapsados
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['COCINA']));
-
-  // Datos de ejemplo de bodegas agrupadas
-  const bodegasData = [
-    {
-      grupo: 'ALMACENAJE',
-      total: 2,
-      items: [
-        { codigo: '01', nombre: 'ALMACEN PRINCIPAL - ZONA 13', tipo: 'ALMACENAJE' },
-        { codigo: '05', nombre: 'BODEGA ALMACEN - ERON PENAL', tipo: 'ALMACENAJE' }
-      ]
-    },
-    {
-      grupo: 'COCINA',
-      total: 2,
-      items: [
-        { codigo: '03', nombre: 'COCINA UNIDAD URIS ZONA 13', tipo: 'COCINA' },
-        { codigo: '12', nombre: 'BODEGA COCINA - ERON PENAL', tipo: 'COCINA' }
-      ]
+  // Obtener el siguiente código cuando se abre el formulario para crear
+  React.useEffect(() => {
+    if (!editingUnidad) {
+      // Solo obtener el siguiente código si estamos creando una nueva unidad
+      unidadServiciosService.getNextCodigo()
+        .then(codigo => {
+          setNextCodigo(codigo);
+          setFormData(prev => ({ ...prev, codigo }));
+        })
+        .catch(error => {
+          console.error('Error obteniendo siguiente código:', error);
+          setNextCodigo("001");
+          setFormData(prev => ({ ...prev, codigo: "001" }));
+        });
     }
-  ];
+  }, [editingUnidad]);
 
-  const toggleGroup = (grupo: string) => {
-    setExpandedGroups(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(grupo)) {
-        newSet.delete(grupo);
-      } else {
-        newSet.add(grupo);
-      }
-      return newSet;
-    });
-  };
+  // Hook para obtener bodegas de la unidad
+  const { bodegas: bodegasUnidad } = useBodegasUnidad({ 
+    unidadId: editingUnidad?.id,
+    enabled: !!editingUnidad?.id 
+  });
 
   const handleInputChange = (field: keyof UnidadServicioForm, value: string | number) => {
+    // No permitir cambios en el código si es autoincrementable
+    if (field === 'codigo' && !editingUnidad) {
+      return; // No actualizar el código en modo creación
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -670,9 +673,11 @@ const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
                 <Label htmlFor="codigo" className="text-xs">Codigo</Label>
                 <Input
                   id="codigo"
-                  value={formData.codigo}
+                  value={formData.codigo || "Cargando..."}
                   onChange={(e) => handleInputChange('codigo', e.target.value)}
-                  className="border-blue-200 w-full h-8 text-xs"
+                  readOnly={!editingUnidad}
+                  className="border-red-200 bg-red-50 text-red-600 font-bold w-full h-8 text-xs cursor-default"
+                  autoComplete="off"
                 />
               </div>
 
@@ -684,6 +689,7 @@ const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
                   onChange={(e) => handleInputChange('nombre_servicio', e.target.value)}
                   required
                   className="h-8 text-xs"
+                  autoComplete="off"
                 />
               </div>
 
@@ -696,22 +702,23 @@ const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
                   onChange={(e) => handleInputChange('no_ppl', parseInt(e.target.value) || 0)}
                   required
                   className="w-full h-8 text-xs"
+                  autoComplete="off"
                 />
               </div>
 
               <div className="space-y-1 col-span-2">
-                <Label htmlFor="municipio" className="text-xs">Municipio *</Label>
+                <Label htmlFor="sucursal" className="text-xs">Sucursal *</Label>
                 <Select
-                  value={formData.id_municipio.toString()}
-                  onValueChange={(value) => handleInputChange('id_municipio', parseInt(value))}
+                  value={formData.id_sucursal.toString()}
+                  onValueChange={(value) => handleInputChange('id_sucursal', parseInt(value))}
                 >
                   <SelectTrigger className="h-8 text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {municipios.map((municipio) => (
-                      <SelectItem key={municipio.id} value={municipio.id.toString()}>
-                        {municipio.nombre}
+                    {sucursales.map((sucursal) => (
+                      <SelectItem key={sucursal.id} value={sucursal.id.toString()}>
+                        {sucursal.nombre}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -721,91 +728,11 @@ const UnidadServicioForm: React.FC<UnidadServicioFormProps> = ({
           </div>
 
           {/* Sección de bodegas - Solo lectura */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800">Listado de bodegas de esta unidad</h3>
-            
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader className="bg-cyan-50">
-                  <TableRow>
-                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Codigo</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Nombre de la bodega</TableHead>
-                    <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Tipo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bodegasData.map((grupo) => (
-                    <React.Fragment key={grupo.grupo}>
-                      {/* Fila del grupo */}
-                      <TableRow className="bg-gradient-to-r from-gray-50 to-gray-100 hover:from-gray-100 hover:to-gray-200 transition-all duration-200">
-                        <TableCell colSpan={3} className="py-1 px-2">
-                          <div 
-                            className="flex items-center gap-2 cursor-pointer hover:bg-white/50 p-1 rounded transition-all duration-200 group"
-                            onClick={() => toggleGroup(grupo.grupo)}
-                          >
-                            <div className="flex items-center gap-1">
-                              <div className="transition-transform duration-300 ease-in-out group-hover:scale-110">
-                                {expandedGroups.has(grupo.grupo) ? (
-                                  <ChevronDown className="w-3 h-3 text-cyan-600" />
-                                ) : (
-                                  <ChevronRight className="w-3 h-3 text-cyan-600" />
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {grupo.grupo === 'ALMACENAJE' ? (
-                                  <Package className="w-3 h-3 text-blue-600" />
-                                ) : (
-                                  <ChefHat className="w-3 h-3 text-orange-600" />
-                                )}
-                                <span className="font-semibold text-gray-800 group-hover:text-cyan-700 transition-colors duration-200 text-xs">
-                                  {grupo.grupo} - Total ({grupo.total})
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Items del grupo - Solo se muestran cuando está expandido */}
-                      {expandedGroups.has(grupo.grupo) && grupo.items.map((item, index) => (
-                        <TableRow 
-                          key={`${grupo.grupo}-${index}`} 
-                          className="hover:bg-cyan-50/50 transition-colors duration-200 border-l-2 border-l-transparent hover:border-l-cyan-300"
-                          style={{
-                            animationDelay: `${index * 100}ms`,
-                            animation: 'slideInFromTop 0.3s ease-out forwards'
-                          }}
-                        >
-                          <TableCell className="py-1 px-2 text-xs text-gray-900 font-medium">
-                            <div className="flex items-center gap-1">
-                              <div className="w-5 h-5 bg-cyan-100 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-bold text-cyan-700">{item.codigo}</span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-1 px-2 text-xs text-gray-900">
-                            {item.nombre}
-                          </TableCell>
-                          <TableCell className="py-1 px-2">
-                            <Badge 
-                              variant="secondary" 
-                              className={`text-xs px-1 py-0 ${
-                                item.tipo === 'ALMACENAJE' 
-                                  ? 'bg-blue-100 text-blue-700 border-blue-200' 
-                                  : 'bg-orange-100 text-orange-700 border-orange-200'
-                              }`}
-                            >
-                              {item.tipo}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </React.Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
+          <BodegasUnidadTable 
+            bodegas={bodegasUnidad}
+            unidadNombre={editingUnidad?.nombre_servicio}
+            emptyMessage={editingUnidad ? 'No hay bodegas asociadas a esta unidad de servicio' : 'Selecciona una unidad para ver sus bodegas'}
+          />
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button

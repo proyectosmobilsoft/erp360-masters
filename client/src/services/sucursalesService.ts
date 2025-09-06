@@ -23,7 +23,7 @@ export interface SucursalData {
 }
 
 export interface SucursalForm {
-  codigo: string;
+  codigo?: string;
   nombre: string;
   id_empresa: number;
   id_municipio: number;
@@ -194,5 +194,28 @@ export const sucursalesService = {
     }
 
     return data;
+  },
+
+  // Obtener el siguiente código disponible
+  async getNextCodigo(): Promise<string> {
+    const { data, error } = await supabase
+      .from('gen_sucursales')
+      .select('codigo')
+      .order('codigo', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('❌ Error obteniendo siguiente código:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return '001'; // Primer código si no hay sucursales
+    }
+
+    // Obtener el último código y incrementarlo
+    const lastCodigo = data[0].codigo;
+    const nextNumber = parseInt(lastCodigo) + 1;
+    return nextNumber.toString().padStart(3, '0');
   }
 };

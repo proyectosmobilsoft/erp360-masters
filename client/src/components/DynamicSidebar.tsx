@@ -17,6 +17,13 @@ import {
   MapPin,
   Building2,
   Building,
+  Package,
+  Settings,
+  BookOpen,
+  Layers,
+  Ruler,
+  Box,
+  Tag,
 } from 'lucide-react';
 
 const menuItems = [
@@ -27,22 +34,24 @@ const menuItems = [
     subItems: [],
   },
   {
-    title: "Sucursales",
-    icon: <Building className="h-5 w-5" />,
-    path: "/sucursales",
-    subItems: [],
+    title: "Catálogos Básicos",
+    icon: <BookOpen className="h-5 w-5" />,
+    subItems: [
+      { title: "Lineas", path: "/lineas", icon: <Layers className="h-4 w-4" /> },
+      { title: "SubLineas", path: "/sublineas", icon: <Tag className="h-4 w-4" /> },
+      { title: "Medidas", path: "/medidas", icon: <Ruler className="h-4 w-4" /> },
+      { title: "Productos", path: "/productos", icon: <Box className="h-4 w-4" /> },
+    ],
   },
   {
-    title: "Unidad Servicios",
-    icon: <Building2 className="h-5 w-5" />,
-    path: "/unidad-servicios",
-    subItems: [],
-  },
-  {
-    title: "Zonas",
-    icon: <MapPin className="h-5 w-5" />,
-    path: "/zonas",
-    subItems: [],
+    title: "Estructura Funcional",
+    icon: <Settings className="h-5 w-5" />,
+    subItems: [
+      { title: "Sucursales", path: "/sucursales", icon: <Building className="h-4 w-4" /> },
+      { title: "Unidad Servicios", path: "/unidad-servicios", icon: <Building2 className="h-4 w-4" /> },
+      { title: "Bodegas", path: "/bodegas", icon: <Package className="h-4 w-4" /> },
+      { title: "Zonas", path: "/zonas", icon: <MapPin className="h-4 w-4" /> },
+    ],
   },
   {
     title: "Seguridad",

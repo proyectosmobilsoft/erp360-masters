@@ -20,7 +20,9 @@ import EditarUsuarioPage from './pages/seguridad/EditarUsuarioPage';
 import PerfilesPage from './pages/seguridad/PerfilesPage';
 import SucursalesPage from './pages/seguridad/SucursalesPage';
 import UnidadServiciosPage from './pages/seguridad/UnidadServiciosPage';
+import BodegasPage from './pages/seguridad/BodegasPage';
 import ZonasPage from './pages/seguridad/ZonasPage';
+import LineasPage from './pages/seguridad/LineasPage';
 
 import GestionPermisosPage from './pages/seguridad/GestionPermisosPage';
 import PermisosPage from './pages/seguridad/PermisosPage';
@@ -63,8 +65,14 @@ function App() {
             {/* Rutas de unidad servicios */}
             <Route path="/unidad-servicios" element={<UnidadServiciosPage />} />
             
+            {/* Rutas de bodegas */}
+            <Route path="/bodegas" element={<BodegasPage />} />
+            
             {/* Rutas de zonas */}
             <Route path="/zonas" element={<ZonasPage />} />
+            
+            {/* Rutas de líneas */}
+            <Route path="/lineas" element={<LineasPage />} />
             
             {/* Rutas de seguridad */}
             <Route path="/usuarios" element={<UsuariosPage />} />

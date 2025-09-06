@@ -36,7 +36,7 @@ import { Can } from '@/contexts/PermissionsContext';
 import { supabase } from '@/services/supabaseClient';
 
 interface SucursalForm {
-  codigo: string;
+  codigo?: string;
   nombre: string;
   id_empresa: number;
   id_municipio: number;
@@ -313,7 +313,7 @@ const SucursalesPage: React.FC = () => {
                   <Can action="accion-crear-sucursal">
                     <Button
                       onClick={handleNuevaSucursal}
-                      className="bg-brand-lime hover:bg-brand-lime/90"
+                      className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
                       size="sm"
                     >
                       Adicionar Registro
@@ -444,25 +444,44 @@ const SucursalesPage: React.FC = () => {
                                    </AlertDialog>
                                  </Can>
                                ) : (
-                                 <Can action="accion-activar-sucursal">
-                                   <TooltipProvider>
-                                     <Tooltip>
-                                       <TooltipTrigger asChild>
-                                         <Button
-                                           variant="ghost"
-                                           size="icon"
-                                           onClick={() => handleActivarSucursal(sucursal.id!)}
-                                           aria-label="Activar sucursal"
-                                         >
-                                           <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
-                                         </Button>
-                                       </TooltipTrigger>
-                                       <TooltipContent>
-                                         <p>Activar</p>
-                                       </TooltipContent>
-                                     </Tooltip>
-                                   </TooltipProvider>
-                                 </Can>
+                                                                 <Can action="accion-activar-sucursal">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Activar sucursal"
+                                            >
+                                              <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Activar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta acción activará la sucursal "{sucursal.nombre}".
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleActivarSucursal(sucursal.id!)}
+                                        >
+                                          Activar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
                                )}
 
                                {sucursal.estado === 0 && (
@@ -583,6 +602,24 @@ const SucursalForm: React.FC<SucursalFormProps> = ({
     id_municipio: sucursal?.id_municipio || 0,
     estado: sucursal?.estado || 1,
   });
+  const [nextCodigo, setNextCodigo] = useState<string>("");
+
+  // Obtener el siguiente código cuando se abre el formulario para crear
+  React.useEffect(() => {
+    if (!editingSucursal) {
+      // Solo obtener el siguiente código si estamos creando una nueva sucursal
+      sucursalesService.getNextCodigo()
+        .then(codigo => {
+          setNextCodigo(codigo);
+          setFormData(prev => ({ ...prev, codigo }));
+        })
+        .catch(error => {
+          console.error('Error obteniendo siguiente código:', error);
+          setNextCodigo("001");
+          setFormData(prev => ({ ...prev, codigo: "001" }));
+        });
+    }
+  }, [editingSucursal]);
 
   // Reiniciar formulario cuando cambie editingSucursal
   React.useEffect(() => {
@@ -601,9 +638,9 @@ const SucursalForm: React.FC<SucursalFormProps> = ({
   };
 
   const handleInputChange = (field: keyof SucursalForm, value: string | number) => {
-    // Validar que el código no exceda 3 caracteres
-    if (field === 'codigo' && typeof value === 'string' && value.length > 3) {
-      return; // No actualizar si excede el límite
+    // No permitir cambios en el código si es autoincrementable
+    if (field === 'codigo' && !editingSucursal) {
+      return; // No actualizar el código en modo creación
     }
     
     setFormData(prev => ({
@@ -665,22 +702,23 @@ const SucursalForm: React.FC<SucursalFormProps> = ({
          )}
 
                  <form onSubmit={handleSubmit} className="space-y-6">
-           <div className="grid grid-cols-3 gap-4">
+           <div className="grid grid-cols-12 gap-4">
                                  {/* Código */}
-                    <div className="space-y-2">
-                      <Label htmlFor="codigo" className="text-sm font-medium">Código (máx. 3 caracteres)</Label>
-                      <Input
-                        id="codigo"
-                        value={formData.codigo}
-                        onChange={(e) => handleInputChange('codigo', e.target.value)}
-                        maxLength={3}
-                        className="h-8 text-sm"
-                        placeholder="Ej: 001"
-                      />
+                    <div className="col-span-2 space-y-2">
+                      <Label htmlFor="codigo" className="text-sm font-medium">Código</Label>
+                       <Input
+                         id="codigo"
+                         value={formData.codigo || "Cargando..."}
+                         onChange={(e) => handleInputChange('codigo', e.target.value)}
+                         readOnly={!editingSucursal}
+                         className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
+                         placeholder={editingSucursal ? "Código" : "Cargando..."}
+                         autoComplete="off"
+                       />
                     </div>
 
              {/* Nombre */}
-             <div className="space-y-2">
+             <div className="col-span-6 space-y-2">
                <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
                <Input
                  id="nombre"
@@ -688,18 +726,19 @@ const SucursalForm: React.FC<SucursalFormProps> = ({
                  onChange={(e) => handleInputChange('nombre', e.target.value)}
                  required
                  className="h-8 text-sm"
+                 autoComplete="off"
                />
              </div>
 
              {/* Municipio */}
-             <div className="space-y-2">
+             <div className="col-span-4 space-y-2">
                <Label htmlFor="municipio" className="text-sm font-medium">Municipio *</Label>
                <Select 
                  value={formData.id_municipio.toString()} 
                  onValueChange={(value) => handleInputChange('id_municipio', parseInt(value))}
                >
-                 <SelectTrigger>
-                   <SelectValue placeholder="Seleccionar municipio" />
+                 <SelectTrigger className="h-8 text-sm">
+                   <SelectValue />
                  </SelectTrigger>
                  <SelectContent>
                    {municipios.map((municipio) => (

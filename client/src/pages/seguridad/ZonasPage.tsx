@@ -47,7 +47,7 @@ import { zonasService, ZonaData, UnidadServicioData, ZonaDetalleData } from "@/s
 import { Can } from "@/contexts/PermissionsContext";
 
 interface ZonaForm {
-  codigo: string;
+  codigo?: string;
   nombre: string;
   abreviatura: string;
   no_ppl: number;
@@ -90,31 +90,28 @@ const ZonasPage = () => {
   const createZonaMutation = useMutation({
     mutationFn: async (data: ZonaForm) => {
       startLoading();
-      try {
-        const zonaData: ZonaData = {
-          codigo: data.codigo,
-          nombre: data.nombre,
-          abreviatura: data.abreviatura,
-          no_ppl: data.no_ppl,
-          activo: true
-        };
-        
-        const newZona = await zonasService.createZona(zonaData);
-        
-        // Agregar unidades de servicio si se seleccionaron
-        if (unidadesDetalle.length > 0) {
-          await zonasService.updateZonaUnidadesServicio(newZona.id, unidadesDetalle.map(unidad => ({
-            id_unidad_servicio: unidad.id_unidad_servicio,
-            no_ppl: unidad.no_ppl
-          })));
-        }
-        
-        return newZona;
-      } finally {
-        stopLoading();
+      const zonaData: ZonaData = {
+        codigo: data.codigo!,
+        nombre: data.nombre,
+        abreviatura: data.abreviatura,
+        no_ppl: data.no_ppl,
+        activo: true
+      };
+      
+      const newZona = await zonasService.createZona(zonaData);
+      
+      // Agregar unidades de servicio si se seleccionaron
+      if (unidadesDetalle.length > 0) {
+        await zonasService.updateZonaUnidadesServicio(newZona.id, unidadesDetalle.map(unidad => ({
+          id_unidad_servicio: unidad.id_unidad_servicio,
+          no_ppl: unidad.no_ppl
+        })));
       }
+      
+      return newZona;
     },
     onSuccess: () => {
+      stopLoading();
       toast({
         title: "Zona creada",
         description: "La zona ha sido creada exitosamente",
@@ -124,6 +121,7 @@ const ZonasPage = () => {
       resetForm();
     },
     onError: (error: any) => {
+      stopLoading();
       toast({
         title: "Error al crear zona",
         description: error.message || "Hubo un error al crear la zona",
@@ -135,31 +133,27 @@ const ZonasPage = () => {
   const updateZonaMutation = useMutation({
     mutationFn: async (data: ZonaForm & { id: number }) => {
       startLoading();
-      try {
-        const zonaData: Partial<ZonaData> = {
-          codigo: data.codigo,
-          nombre: data.nombre,
-          abreviatura: data.abreviatura,
-          no_ppl: data.no_ppl,
-        };
-        
-        // Actualizar datos básicos de la zona
-        const updatedZona = await zonasService.updateZona(data.id, zonaData);
-        
-        // Actualizar unidades de servicio asociadas
-        const unidadesToUpdate = unidadesDetalle.map(unidad => ({
-          id_unidad_servicio: unidad.id_unidad_servicio,
-          no_ppl: unidad.no_ppl
-        }));
-        
-        await zonasService.updateZonaUnidadesServicio(data.id, unidadesToUpdate);
-        
-        return updatedZona;
-      } finally {
-        stopLoading();
-      }
+      const zonaData: Partial<ZonaData> = {
+        nombre: data.nombre,
+        abreviatura: data.abreviatura,
+        no_ppl: data.no_ppl,
+      };
+      
+      // Actualizar datos básicos de la zona
+      const updatedZona = await zonasService.updateZona(data.id, zonaData);
+      
+      // Actualizar unidades de servicio asociadas
+      const unidadesToUpdate = unidadesDetalle.map(unidad => ({
+        id_unidad_servicio: unidad.id_unidad_servicio,
+        no_ppl: unidad.no_ppl
+      }));
+      
+      await zonasService.updateZonaUnidadesServicio(data.id, unidadesToUpdate);
+      
+      return updatedZona;
     },
     onSuccess: () => {
+      stopLoading();
       toast({
         title: "Zona actualizada",
         description: "La zona ha sido actualizada exitosamente",
@@ -170,6 +164,7 @@ const ZonasPage = () => {
       resetForm();
     },
     onError: (error: any) => {
+      stopLoading();
       toast({
         title: "Error al actualizar zona",
         description: error.message || "Hubo un error al actualizar la zona",
@@ -181,13 +176,10 @@ const ZonasPage = () => {
   const deleteZonaMutation = useMutation({
     mutationFn: async (id: number) => {
       startLoading();
-      try {
-        return await zonasService.deleteZonaPermanent(id);
-      } finally {
-        stopLoading();
-      }
+      return await zonasService.deleteZonaPermanent(id);
     },
     onSuccess: () => {
+      stopLoading();
       toast({
         title: "Zona eliminada",
         description: "La zona ha sido eliminada exitosamente",
@@ -195,6 +187,7 @@ const ZonasPage = () => {
       queryClient.invalidateQueries({ queryKey: ["zonas"] });
     },
     onError: (error: any) => {
+      stopLoading();
       toast({
         title: "Error al eliminar zona",
         description: error.message || "Hubo un error al eliminar la zona",
@@ -206,13 +199,10 @@ const ZonasPage = () => {
   const activateZonaMutation = useMutation({
     mutationFn: async (id: number) => {
       startLoading();
-      try {
-        return await zonasService.activateZona(id);
-      } finally {
-        stopLoading();
-      }
+      return await zonasService.activateZona(id);
     },
     onSuccess: () => {
+      stopLoading();
       toast({
         title: "Zona activada",
         description: "La zona ha sido activada exitosamente",
@@ -220,6 +210,7 @@ const ZonasPage = () => {
       queryClient.invalidateQueries({ queryKey: ["zonas"] });
     },
     onError: (error: any) => {
+      stopLoading();
       toast({
         title: "Error al activar zona",
         description: error.message || "Hubo un error al activar la zona",
@@ -231,13 +222,10 @@ const ZonasPage = () => {
   const deactivateZonaMutation = useMutation({
     mutationFn: async (id: number) => {
       startLoading();
-      try {
-        return await zonasService.deactivateZona(id);
-      } finally {
-        stopLoading();
-      }
+      return await zonasService.deactivateZona(id);
     },
     onSuccess: () => {
+      stopLoading();
       toast({
         title: "Zona desactivada",
         description: "La zona ha sido desactivada exitosamente",
@@ -245,6 +233,7 @@ const ZonasPage = () => {
       queryClient.invalidateQueries({ queryKey: ["zonas"] });
     },
     onError: (error: any) => {
+      stopLoading();
       toast({
         title: "Error al desactivar zona",
         description: error.message || "Hubo un error al desactivar la zona",
@@ -375,7 +364,7 @@ const ZonasPage = () => {
                 <Can action="accion-crear-zona">
                   <Button
                     onClick={handleCrearZona}
-                    className="bg-brand-lime hover:bg-brand-lime/90"
+                    className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
                     size="sm"
                   >
                     Adicionar Registro
@@ -388,16 +377,16 @@ const ZonasPage = () => {
             <div className="flex flex-wrap items-center gap-4 p-3 bg-cyan-50 rounded-lg mb-4 shadow-sm">
               <div className="flex-1 min-w-[200px]">
                 <Input
-                  placeholder="Buscar por nombre, código o abreviatura..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
+                  className="w-full h-8 text-sm"
+                  autoComplete="off"
                 />
               </div>
               <div className="min-w-[180px]">
                 <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -421,12 +410,12 @@ const ZonasPage = () => {
               <Table className="min-w-[900px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
                   <TableRow className="text-left font-semibold text-gray-700">
-                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                    <TableHead className="px-4 py-3">Código</TableHead>
+                    <TableHead className="px-2 py-1 text-teal-600 w-20">Acciones</TableHead>
+                    <TableHead className="px-4 py-3 w-20">Código</TableHead>
                     <TableHead className="px-4 py-3">Nombre</TableHead>
-                    <TableHead className="px-4 py-3">Abreviatura</TableHead>
-                    <TableHead className="px-4 py-3">No. PPL</TableHead>
-                    <TableHead className="px-4 py-3">Estado</TableHead>
+                    <TableHead className="px-4 py-3 w-24">Abreviatura</TableHead>
+                    <TableHead className="px-4 py-3 w-20">No. PPL</TableHead>
+                    <TableHead className="px-4 py-3 w-24">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -591,16 +580,16 @@ const ZonasPage = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-20">
                           {zona.codigo}
                         </TableCell>
                         <TableCell className="px-3 py-2 text-sm text-gray-900">
                           {zona.nombre}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
                           {zona.abreviatura || "-"}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 w-20">
                           {zona.no_ppl || "-"}
                         </TableCell>
                         <TableCell className="px-3 py-2">
@@ -696,7 +685,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = useState<ZonaForm>({
-    codigo: zona?.codigo || "008",
+    codigo: zona?.codigo || "",
     nombre: zona?.nombre || "",
     abreviatura: zona?.abreviatura || "",
     no_ppl: zona?.no_ppl || 0,
@@ -704,7 +693,24 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
     unidadesServicio: [],
   });
 
+  const [nextCodigo, setNextCodigo] = useState<string>("");
   const [open, setOpen] = useState(false);
+
+  // Obtener el siguiente código disponible cuando se crea una nueva zona
+  React.useEffect(() => {
+    if (!editingZona) {
+      zonasService.getNextCodigo()
+        .then(codigo => {
+          setNextCodigo(codigo);
+          setFormData(prev => ({ ...prev, codigo }));
+        })
+        .catch(error => {
+          console.error('Error obteniendo siguiente código:', error);
+          setNextCodigo("001");
+          setFormData(prev => ({ ...prev, codigo: "001" }));
+        });
+    }
+  }, [editingZona]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -715,6 +721,11 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
   };
 
   const handleInputChange = (field: keyof ZonaForm, value: string | number) => {
+    // No permitir cambios manuales al código cuando se está creando
+    if (field === 'codigo' && !editingZona) {
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -754,42 +765,46 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Formulario como en la imagen */}
+      {/* Formulario compacto */}
       <div className="space-y-4 mb-6">
-        {/* Primera fila: Información de la Zona */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="codigo">Codigo</Label>
+        {/* Información de la Zona en una sola fila */}
+        <div className="grid grid-cols-12 gap-4">
+          <div className="col-span-2 space-y-2">
+            <Label htmlFor="codigo" className="text-sm font-medium">Código</Label>
             <Input
               id="codigo"
-              value={formData.codigo}
+              value={formData.codigo || "Cargando..."}
               onChange={(e) => handleInputChange('codigo', e.target.value)}
-              className="border-blue-200"
+              readOnly={!editingZona}
+              className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
+              autoComplete="off"
             />
           </div>
 
-          <div className="space-y-2 col-span-2">
-            <Label htmlFor="nombre">Nombre de Zona *</Label>
+          <div className="col-span-6 space-y-2">
+            <Label htmlFor="nombre" className="text-sm font-medium">Nombre de Zona *</Label>
             <Input
               id="nombre"
               value={formData.nombre}
               onChange={(e) => handleInputChange('nombre', e.target.value)}
               required
+              className="h-8 text-sm"
+              autoComplete="off"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="abreviatura">Abreviatura *</Label>
+          <div className="col-span-4 space-y-2">
+            <Label htmlFor="abreviatura" className="text-sm font-medium">Abreviatura *</Label>
             <Input
               id="abreviatura"
               value={formData.abreviatura}
               onChange={(e) => handleInputChange('abreviatura', e.target.value)}
               required
+              className="h-8 text-sm"
+              autoComplete="off"
             />
           </div>
         </div>
-
-
       </div>
 
       {/* Tabla de detalle con fila de agregar integrada */}
@@ -823,13 +838,13 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                     >
                       {formData.unidadServicioId
                         ? unidadesServicio.find((unidad) => unidad.id === formData.unidadServicioId)?.nombre_servicio
-                        : "Seleccionar unidad..."}
+                        : ""}
                       <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[400px] p-0">
                     <Command>
-                      <CommandInput placeholder="Buscar unidad de servicio..." />
+                      <CommandInput autoComplete="off" />
                       <CommandList>
                         <CommandEmpty>No se encontraron unidades.</CommandEmpty>
                         <CommandGroup>
@@ -907,7 +922,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
             {/* Registros agregados */}
             {unidadesDetalle.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-6 text-gray-500 text-sm">
+                <TableCell colSpan={5} className="text-center py-3 text-gray-500 text-xs">
                   No hay unidades agregadas
                 </TableCell>
               </TableRow>
@@ -916,17 +931,17 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                 const unidadServicio = unidadesServicio.find(u => u.id === unidad.id_unidad_servicio);
                 return (
                   <TableRow key={unidad.id_unidad_servicio} className="hover:bg-gray-50">
-                    <TableCell className="font-medium text-sm py-2">{unidadServicio?.codigo || ""}</TableCell>
-                    <TableCell className="text-sm py-2">{unidad.nombre_servicio}</TableCell>
-                    <TableCell className="text-sm py-2">{unidad.municipio}</TableCell>
-                    <TableCell className="text-sm py-2 font-medium">{unidad.no_ppl}</TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="font-medium text-xs py-1 px-2">{unidadServicio?.codigo || ""}</TableCell>
+                    <TableCell className="text-xs py-1 px-2">{unidad.nombre_servicio}</TableCell>
+                    <TableCell className="text-xs py-1 px-2">{unidad.municipio}</TableCell>
+                    <TableCell className="text-xs py-1 px-2 font-medium">{unidad.no_ppl}</TableCell>
+                    <TableCell className="py-1 px-2">
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => removeUnidadDetalle(unidad.id_unidad_servicio)}
-                        className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>

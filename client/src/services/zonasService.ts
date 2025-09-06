@@ -11,6 +11,18 @@ export interface ZonaData {
   updated_at?: string;
 }
 
+export interface ZonaForm {
+  codigo?: string;
+  nombre: string;
+  abreviatura?: string;
+  no_ppl?: number;
+  unidadServicioId: number;
+  unidadesServicio: Array<{
+    id_unidad_servicio: number;
+    no_ppl: number;
+  }>;
+}
+
 export interface UnidadServicioData {
   id?: number;
   codigo?: number;
@@ -110,28 +122,9 @@ export const zonasService = {
   async createZona(zonaData: ZonaData) {
     console.log("➕ zonasService: createZona llamado con:", zonaData);
     
-    // Validar código único
-    const { data: existingZonas, error: checkError } = await supabase
-      .from('prod_zonas_contrato')
-      .select('id, codigo, nombre')
-      .eq('codigo', zonaData.codigo);
-    
-    if (checkError) {
-      console.error('❌ Error verificando código único:', checkError);
-      throw new Error('Error verificando la unicidad del código');
-    }
-    
-    if (existingZonas && existingZonas.length > 0) {
-      console.error('❌ Código ya existe:', existingZonas);
-      throw new Error(`El código '${zonaData.codigo}' ya está en uso por: ${existingZonas[0].nombre}`);
-    }
-    
-    // Excluir el campo id para que se genere automáticamente
-    const { id, ...zonaDataWithoutId } = zonaData;
-    
     const { data: newZona, error: userError } = await supabase
       .from('prod_zonas_contrato')
-      .insert(zonaDataWithoutId)
+      .insert(zonaData)
       .select()
       .single();
     if (userError) throw userError;
@@ -142,25 +135,6 @@ export const zonasService = {
   // Actualizar una zona
   async updateZona(id: number, zonaData: Partial<ZonaData>) {
     console.log("🔄 zonasService: updateZona llamado con:", { id, zonaData });
-    
-    // Validar código único si se está actualizando
-    if (zonaData.codigo) {
-      const { data: existingZonas, error: checkError } = await supabase
-        .from('prod_zonas_contrato')
-        .select('id, codigo, nombre')
-        .eq('codigo', zonaData.codigo)
-        .neq('id', id);
-      
-      if (checkError) {
-        console.error('❌ Error verificando código único:', checkError);
-        throw new Error('Error verificando la unicidad del código');
-      }
-      
-      if (existingZonas && existingZonas.length > 0) {
-        console.error('❌ Código duplicado encontrado:', existingZonas);
-        throw new Error(`El código '${zonaData.codigo}' ya está en uso por otra zona: ${existingZonas[0].nombre}`);
-      }
-    }
     
     const { data: updatedZona, error: userError } = await supabase
       .from('prod_zonas_contrato')
@@ -275,5 +249,28 @@ export const zonasService = {
     }
     
     return [];
+  },
+
+  // Obtener el siguiente código disponible
+  async getNextCodigo(): Promise<string> {
+    const { data, error } = await supabase
+      .from('prod_zonas_contrato')
+      .select('codigo')
+      .order('id', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('❌ Error obteniendo siguiente código:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return '001'; // Primer código si no hay zonas
+    }
+
+    // Obtener el último código y incrementarlo
+    const lastCodigo = data[0].codigo;
+    const nextNumber = parseInt(lastCodigo) + 1;
+    return nextNumber.toString().padStart(3, '0');
   }
 };
