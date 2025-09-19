@@ -207,7 +207,7 @@ const LineasPage: React.FC = () => {
 
   // Estados
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [activeTab, setActiveTab] = useState("lineas");
   const [editingLinea, setEditingLinea] = useState<LineaData | null>(null);
 
@@ -220,6 +220,7 @@ const LineasPage: React.FC = () => {
   // Log cuando los datos cambien
   React.useEffect(() => {
     console.log("📊 Datos de líneas actualizados:", lineas);
+    console.log("📊 Estados de líneas:", lineas.map(l => ({ id: l.id, nombre: l.nombre, estado: l.estado })));
   }, [lineas]);
 
   const { data: categorias = [] } = useQuery({

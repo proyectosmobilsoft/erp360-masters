@@ -117,7 +117,6 @@ const BodegasUnidadTable: React.FC<BodegasUnidadTableProps> = ({
             <TableRow>
               <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Código</TableHead>
               <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Nombre de la bodega</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Sede</TableHead>
               <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Tipo</TableHead>
               <TableHead className="font-semibold text-gray-700 text-xs py-1 px-2">Estado</TableHead>
             </TableRow>
@@ -184,9 +183,6 @@ const BodegasUnidadTable: React.FC<BodegasUnidadTableProps> = ({
                       </TableCell>
                       <TableCell className="py-1 px-2 text-xs text-gray-900">
                         {item.nombre}
-                      </TableCell>
-                      <TableCell className="py-1 px-2 text-xs text-gray-600">
-                        {item.sede || 'N/A'}
                       </TableCell>
                       <TableCell className="py-1 px-2">
                         <Badge 

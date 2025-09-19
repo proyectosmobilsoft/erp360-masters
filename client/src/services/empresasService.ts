@@ -3,18 +3,19 @@ import { supabase } from './supabaseClient';
 
 export interface Empresa {
   id: number;
-  nombre: string;
+  nombre?: string;
   razon_social: string;
   nit: string;
   direccion: string;
   telefono: string;
   email: string;
   representante_legal: string;
-  cargo_representante: string;
-  estado: string;
+  cargo_representante?: string;
+  estado?: string;
+  activo?: boolean;
   logo_base64?: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 /**
@@ -83,7 +84,7 @@ export const empresasService = {
     console.log('Resultado de obtenerEmpresas:', result);
     return result;
   },
-  create: async (empresa: Omit<Empresa, 'id' | 'createdAt' | 'updatedAt'>): Promise<Empresa | null> => {
+  create: async (empresa: Omit<Empresa, 'id' | 'created_at' | 'updated_at'>): Promise<Empresa | null> => {
     try {
       const { data, error } = await supabase
         .from('empresas')

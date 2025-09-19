@@ -57,6 +57,8 @@ const PermisosPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [moduloParaEliminar, setModuloParaEliminar] = useState<Modulo | null>(null);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [permisoParaEliminar, setPermisoParaEliminar] = useState<ModuloPermiso | null>(null);
+  const [showDeletePermisoModal, setShowDeletePermisoModal] = useState(false);
 
   const { toast } = useToast();
   const { startLoading, stopLoading } = useLoading();
@@ -384,9 +386,45 @@ const PermisosPage: React.FC = () => {
     permisoForm.reset();
   };
 
-  const handleQuitarPermiso = (permisoId: number) => {
-    // Esta función se usará en el modal de configuración
-    setPermisosDelModulo(prev => prev.filter(p => p.id !== permisoId));
+  const handleQuitarPermiso = (permiso: ModuloPermiso) => {
+    setPermisoParaEliminar(permiso);
+    setShowDeletePermisoModal(true);
+  };
+
+  const confirmarEliminacionPermiso = async () => {
+    if (!permisoParaEliminar) return;
+    
+    try {
+      startLoading();
+      
+      // Eliminar de la base de datos
+      await deleteModuloPermiso(permisoParaEliminar.id);
+      
+      // Eliminar del estado local
+      setPermisosDelModulo(prev => prev.filter(p => p.id !== permisoParaEliminar.id));
+      
+      toast({
+        title: "✅ Permiso eliminado",
+        description: `El permiso "${permisoParaEliminar.nombre}" ha sido eliminado exitosamente de la base de datos.`,
+        variant: "default",
+      });
+      
+      // Invalidar la consulta para refrescar los datos
+      queryClient.invalidateQueries({ queryKey: ['modulo-permisos', moduloParaConfigurar?.id] });
+      
+      setShowDeletePermisoModal(false);
+      setPermisoParaEliminar(null);
+      
+    } catch (error: any) {
+      console.error('Error al eliminar permiso:', error);
+      toast({
+        title: "❌ Error al eliminar permiso",
+        description: error.message || "Hubo un error al eliminar el permiso de la base de datos",
+        variant: "destructive",
+      });
+    } finally {
+      stopLoading();
+    }
   };
 
   // Efectos para limpiar formularios después de operaciones exitosas
@@ -955,7 +993,7 @@ const PermisosPage: React.FC = () => {
                                         <Button
                                           variant="ghost"
                                           size="icon"
-                                          onClick={() => handleQuitarPermiso(permiso.id)}
+                                          onClick={() => handleQuitarPermiso(permiso)}
                                           aria-label="Eliminar permiso"
                                         >
                                           <Trash className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
@@ -1053,6 +1091,60 @@ const PermisosPage: React.FC = () => {
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Sí, Eliminar Módulo y Permisos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Modal de confirmación para eliminar permiso */}
+      <AlertDialog open={showDeletePermisoModal} onOpenChange={setShowDeletePermisoModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-600" />
+              Confirmar Eliminación de Permiso
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  ADVERTENCIA
+                </div>
+                <p className="text-red-700 text-sm">
+                  ¿Estás seguro de que deseas eliminar el permiso <strong>"{permisoParaEliminar?.nombre}"</strong>?
+                </p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                  <Info className="h-4 w-4" />
+                  IMPACTO
+                </div>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  <li>• El permiso será eliminado permanentemente de la base de datos</li>
+                  <li>• Los roles que tengan este permiso perderán acceso a la funcionalidad</li>
+                  <li>• Esta acción no se puede deshacer</li>
+                </ul>
+              </div>
+              <p className="text-gray-600">
+                ¿Estás completamente seguro de que deseas continuar con esta eliminación?
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowDeletePermisoModal(false);
+                setPermisoParaEliminar(null);
+              }}
+            >
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmarEliminacionPermiso}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Sí, Eliminar Permiso
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

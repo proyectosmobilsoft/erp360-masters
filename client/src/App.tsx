@@ -23,6 +23,10 @@ import UnidadServiciosPage from './pages/seguridad/UnidadServiciosPage';
 import BodegasPage from './pages/seguridad/BodegasPage';
 import ZonasPage from './pages/seguridad/ZonasPage';
 import LineasPage from './pages/seguridad/LineasPage';
+import CategoriasPage from './pages/seguridad/CategoriasPage';
+import SublineasPage from './pages/seguridad/SublineasPage';
+import MedidasPage from './pages/seguridad/MedidasPage';
+import ProductosPage from './pages/seguridad/ProductosPage';
 
 import GestionPermisosPage from './pages/seguridad/GestionPermisosPage';
 import PermisosPage from './pages/seguridad/PermisosPage';
@@ -72,7 +76,11 @@ function App() {
             <Route path="/zonas" element={<ZonasPage />} />
             
             {/* Rutas de líneas */}
+            <Route path="/categorias" element={<CategoriasPage />} />
             <Route path="/lineas" element={<LineasPage />} />
+            <Route path="/sublineas" element={<SublineasPage />} />
+            <Route path="/medidas" element={<MedidasPage />} />
+            <Route path="/productos" element={<ProductosPage />} />
             
             {/* Rutas de seguridad */}
             <Route path="/usuarios" element={<UsuariosPage />} />

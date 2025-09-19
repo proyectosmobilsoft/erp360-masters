@@ -109,7 +109,8 @@ export function PermissionsForm({ selectedPermissions, onPermissionsChange }: Pe
       actions: []
     };
 
-    onPermissionsChange([...selectedPermissions, newPermission]);
+    // Agregar la nueva vista al principio del array para que aparezca de primero
+    onPermissionsChange([newPermission, ...selectedPermissions]);
     setSelectedView("");
   };
 
