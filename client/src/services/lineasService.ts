@@ -123,7 +123,7 @@ export const lineasService = {
       // Primero verificar si la línea existe
       const { data: linea, error: lineaQueryError } = await supabase
         .from('inv_lineas')
-        .select('id, nombre')
+        .select('id, nombre, estado')
         .eq('id', id)
         .single();
       
@@ -134,7 +134,25 @@ export const lineasService = {
       
       console.log("📋 Línea encontrada:", linea);
       
-      // Intentar eliminar directamente primero
+      // Verificar que la línea esté inactiva antes de eliminar
+      if (linea.estado === 1) {
+        throw new Error('No se puede eliminar una línea activa. Primero debe desactivarla.');
+      }
+      
+      // Verificar si hay referencias en otras tablas
+      const { data: sublineasRef, error: sublineasError } = await supabase
+        .from('inv_sublineas')
+        .select('id')
+        .eq('id_linea', id)
+        .limit(1);
+
+      if (sublineasError) {
+        console.error('Error al verificar referencias en sublíneas:', sublineasError);
+      } else if (sublineasRef && sublineasRef.length > 0) {
+        throw new Error('No se puede eliminar la línea porque tiene sublíneas asociadas.');
+      }
+
+      // Intentar eliminar directamente
       const { error: deleteError } = await supabase
         .from('inv_lineas')
         .delete()
@@ -142,79 +160,14 @@ export const lineasService = {
       
       if (deleteError) {
         console.error('Error eliminando línea directamente:', deleteError);
-        
-        // Si hay error de FK, intentar eliminación en cascada
-        if (deleteError.code === "23503" || deleteError.message?.includes("foreign key constraint")) {
-          console.log("🔄 Intentando eliminación en cascada...");
-          
-          // Obtener las sublíneas relacionadas
-          const { data: sublineas, error: sublineasQueryError } = await supabase
-            .from('inv_sublineas')
-            .select('id, nombre')
-            .eq('id_linea', id);
-          
-          if (sublineasQueryError) {
-            console.error('Error obteniendo sublíneas:', sublineasQueryError);
-            throw sublineasQueryError;
-          }
-          
-          // Si hay sublíneas, eliminar los productos relacionados primero
-          if (sublineas && sublineas.length > 0) {
-            const sublineaIds = sublineas.map(s => s.id);
-            
-            console.log(`📦 Eliminando productos de ${sublineas.length} sublíneas`);
-            
-            // Eliminar productos relacionados
-            const { error: productosError } = await supabase
-              .from('inv_productos')
-              .delete()
-              .in('id_sublineas', sublineaIds);
-            
-            if (productosError) {
-              console.error('Error eliminando productos:', productosError);
-              throw new Error(`No se pudieron eliminar los productos relacionados: ${productosError.message}`);
-            }
-            
-            console.log(`📋 Eliminando ${sublineas.length} sublíneas relacionadas`);
-            
-            // Eliminar sublíneas
-            const { error: sublineasError } = await supabase
-              .from('inv_sublineas')
-              .delete()
-              .eq('id_linea', id);
-            
-            if (sublineasError) {
-              console.error('Error eliminando sublíneas:', sublineasError);
-              throw new Error(`No se pudieron eliminar las sublíneas relacionadas: ${sublineasError.message}`);
-            }
-          }
-          
-          // Intentar eliminar la línea nuevamente
-          const { error: retryDeleteError } = await supabase
-            .from('inv_lineas')
-            .delete()
-            .eq('id', id);
-          
-          if (retryDeleteError) {
-            console.error('Error en segundo intento de eliminación:', retryDeleteError);
-            throw new Error(`No se pudo eliminar la línea después de limpiar dependencias: ${retryDeleteError.message}`);
-          }
-        } else {
-          throw new Error(`No se pudo eliminar la línea: ${deleteError.message}`);
-        }
+        throw new Error(`Error al eliminar la línea: ${deleteError.message}`);
       }
       
       console.log("✅ Línea eliminada exitosamente");
-      return { id, nombre: linea.nombre };
-    } catch (error: any) {
-      console.error("❌ Error en eliminación:", error);
-      
-      // Crear un error más descriptivo
-      const errorMessage = error.message || "Error desconocido al eliminar la línea";
-      const enhancedError = new Error(errorMessage) as any;
-      enhancedError.code = error.code;
-      
-      throw enhancedError;
+      return { id: linea.id, nombre: linea.nombre };
+    } catch (error) {
+      console.error('Error en deleteLineaPermanent:', error);
+      throw error;
     }
   },
 

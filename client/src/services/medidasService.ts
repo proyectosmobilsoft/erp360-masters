@@ -6,12 +6,9 @@ export interface MedidaData {
   nombre: string;
   abreviatura: string;
   clase_medida?: string;
-  id_medida_principal?: number;
-  id_unidad_hija?: number;
   cantidad: number;
-  factor?: number;
-  permite_cambio: number;
   val_excedente: number;
+  medida_principal: boolean;
   estado: number;
 }
 
@@ -21,12 +18,9 @@ export interface MedidaForm {
   nombre: string;
   abreviatura: string;
   clase_medida?: string;
-  id_medida_principal?: number;
-  id_unidad_hija?: number;
   cantidad: number;
-  factor?: number;
-  permite_cambio: number;
   val_excedente: number;
+  medida_principal: boolean;
   estado?: number;
 }
 
@@ -159,18 +153,36 @@ export const deleteMedidaPermanent = async (id: number): Promise<{ id: number; n
     // Primero obtener la medida para el retorno
     const { data: medida, error: fetchError } = await supabase
       .from('inv_medidas')
-      .select('id, nombre')
+      .select('id, nombre, estado')
       .eq('id', id)
       .single();
 
     if (fetchError) {
       console.error('Error al obtener medida:', fetchError);
-      throw fetchError;
+      throw new Error(`No se pudo encontrar la medida con ID ${id}`);
     }
 
     console.log('📋 Medida encontrada:', medida);
 
-    // Intentar eliminación directa primero
+    // Verificar que la medida esté inactiva antes de eliminar
+    if (medida.estado === 1) {
+      throw new Error('No se puede eliminar una medida activa. Primero debe desactivarla.');
+    }
+
+    // Verificar si hay referencias en otras tablas
+    const { data: productosRef, error: productosError } = await supabase
+      .from('inv_productos')
+      .select('id')
+      .eq('id_medida', id)
+      .limit(1);
+
+    if (productosError) {
+      console.error('Error al verificar referencias en productos:', productosError);
+    } else if (productosRef && productosRef.length > 0) {
+      throw new Error('No se puede eliminar la medida porque tiene productos asociados.');
+    }
+
+    // Realizar la eliminación
     const { error: deleteError } = await supabase
       .from('inv_medidas')
       .delete()
@@ -178,7 +190,7 @@ export const deleteMedidaPermanent = async (id: number): Promise<{ id: number; n
 
     if (deleteError) {
       console.error('Error al eliminar medida:', deleteError);
-      throw deleteError;
+      throw new Error(`Error al eliminar la medida: ${deleteError.message}`);
     }
 
     console.log('✅ Medida eliminada exitosamente');

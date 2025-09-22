@@ -32,7 +32,10 @@ import {
   Loader2, 
   Save, 
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Trash2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { medidasService, MedidaData, MedidaForm } from '@/services/medidasService';
 
@@ -57,12 +60,9 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
     nombre: medida?.nombre || "",
     abreviatura: medida?.abreviatura || "",
     clase_medida: medida?.clase_medida || "",
-    id_medida_principal: medida?.id_medida_principal || 0,
-    id_unidad_hija: medida?.id_unidad_hija || 0,
     cantidad: medida?.cantidad || 1,
-    factor: medida?.factor || 0,
-    permite_cambio: medida?.permite_cambio || 0,
     val_excedente: medida?.val_excedente || 0,
+    medida_principal: medida?.medida_principal || false,
   });
 
   const [nextCodigo, setNextCodigo] = useState<string>("");
@@ -91,12 +91,9 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
       nombre: editingMedida?.nombre || "",
       abreviatura: editingMedida?.abreviatura || "",
       clase_medida: editingMedida?.clase_medida || "",
-      id_medida_principal: editingMedida?.id_medida_principal || 0,
-      id_unidad_hija: editingMedida?.id_unidad_hija || 0,
       cantidad: editingMedida?.cantidad || 1,
-      factor: editingMedida?.factor || 0,
-      permite_cambio: editingMedida?.permite_cambio || 0,
       val_excedente: editingMedida?.val_excedente || 0,
+      medida_principal: editingMedida?.medida_principal || false,
     });
   }, [editingMedida]);
 
@@ -105,7 +102,7 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
     onSubmit(formData);
   };
 
-  const handleInputChange = (field: keyof MedidaForm, value: string | number) => {
+  const handleInputChange = (field: keyof MedidaForm, value: string | number | boolean) => {
     // No permitir cambios manuales al código cuando se está creando
     if (field === 'codigo' && !editingMedida) {
       return;
@@ -144,19 +141,6 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
               />
             </div>
 
-            {/* Nombre */}
-            <div className="col-span-4 space-y-2">
-              <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
-              <Input
-                id="nombre"
-                value={formData.nombre}
-                onChange={(e) => handleInputChange('nombre', e.target.value)}
-                required
-                className="h-8 text-sm"
-                autoComplete="off"
-              />
-            </div>
-
             {/* Abreviatura */}
             <div className="col-span-3 space-y-2">
               <Label htmlFor="abreviatura" className="text-sm font-medium">Abreviatura *</Label>
@@ -170,27 +154,6 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
               />
             </div>
 
-            {/* Clase Medida */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="clase_medida" className="text-sm font-medium">Clase Medida</Label>
-              <Select
-                value={formData.clase_medida || "sin_clase"}
-                onValueChange={(value) => handleInputChange('clase_medida', value === "sin_clase" ? "" : value)}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder="Seleccionar clase" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sin_clase">Sin clase</SelectItem>
-                  <SelectItem value="Peso">Peso</SelectItem>
-                  <SelectItem value="Volumen">Volumen</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Segunda fila */}
-          <div className="grid grid-cols-12 gap-4">
             {/* Cantidad */}
             <div className="col-span-3 space-y-2">
               <Label htmlFor="cantidad" className="text-sm font-medium">Cantidad *</Label>
@@ -206,39 +169,8 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
               />
             </div>
 
-            {/* Factor */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="factor" className="text-sm font-medium">Factor</Label>
-              <Input
-                id="factor"
-                type="number"
-                step="0.001"
-                value={formData.factor || ""}
-                onChange={(e) => handleInputChange('factor', parseFloat(e.target.value) || 0)}
-                className="h-8 text-sm"
-                autoComplete="off"
-              />
-            </div>
-
-            {/* Permite Cambio */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="permite_cambio" className="text-sm font-medium">Permite Cambio</Label>
-              <Select
-                value={formData.permite_cambio.toString()}
-                onValueChange={(value) => handleInputChange('permite_cambio', parseInt(value))}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">No</SelectItem>
-                  <SelectItem value="1">Sí</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Valor Excedente */}
-            <div className="col-span-3 space-y-2">
+            <div className="col-span-4 space-y-2">
               <Label htmlFor="val_excedente" className="text-sm font-medium">Valor Excedente</Label>
               <Input
                 id="val_excedente"
@@ -252,29 +184,49 @@ const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({
             </div>
           </div>
 
-          {/* Tercera fila */}
+          {/* Segunda fila */}
           <div className="grid grid-cols-12 gap-4">
-            {/* ID Medida Principal */}
-            <div className="col-span-6 space-y-2">
-              <Label htmlFor="id_medida_principal" className="text-sm font-medium">ID Medida Principal</Label>
-              <Input
-                id="id_medida_principal"
-                type="number"
-                value={formData.id_medida_principal || ""}
-                onChange={(e) => handleInputChange('id_medida_principal', parseInt(e.target.value) || 0)}
-                className="h-8 text-sm"
-                autoComplete="off"
-              />
+            {/* Medida Principal */}
+            <div className="col-span-3 space-y-2">
+              <Label htmlFor="medida_principal" className="text-sm font-medium">Medida principal</Label>
+              <div className="flex items-center space-x-2">
+                <input
+                  id="medida_principal"
+                  type="checkbox"
+                  checked={formData.medida_principal || false}
+                  onChange={(e) => handleInputChange('medida_principal', e.target.checked)}
+                  className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">Sí</span>
+              </div>
             </div>
 
-            {/* ID Unidad Hija */}
-            <div className="col-span-6 space-y-2">
-              <Label htmlFor="id_unidad_hija" className="text-sm font-medium">ID Unidad Hija</Label>
+            {/* Clase Medida */}
+            <div className="col-span-4 space-y-2">
+              <Label htmlFor="clase_medida" className="text-sm font-medium">Clase Medida</Label>
+              <Select
+                value={formData.clase_medida || "sin_clase"}
+                onValueChange={(value) => handleInputChange('clase_medida', value === "sin_clase" ? "" : value)}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Seleccionar clase" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sin_clase">Sin clase</SelectItem>
+                  <SelectItem value="Peso">Peso</SelectItem>
+                  <SelectItem value="Volumen">Volumen</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Nombre */}
+            <div className="col-span-5 space-y-2">
+              <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
               <Input
-                id="id_unidad_hija"
-                type="number"
-                value={formData.id_unidad_hija || ""}
-                onChange={(e) => handleInputChange('id_unidad_hija', parseInt(e.target.value) || 0)}
+                id="nombre"
+                value={formData.nombre}
+                onChange={(e) => handleInputChange('nombre', e.target.value)}
+                required
                 className="h-8 text-sm"
                 autoComplete="off"
               />
@@ -356,12 +308,9 @@ const MedidasPage: React.FC = () => {
         nombre: data.nombre,
         abreviatura: data.abreviatura,
         clase_medida: data.clase_medida || undefined,
-        id_medida_principal: data.id_medida_principal || undefined,
-        id_unidad_hija: data.id_unidad_hija || undefined,
         cantidad: data.cantidad,
-        factor: data.factor || undefined,
-        permite_cambio: data.permite_cambio,
         val_excedente: data.val_excedente,
+        medida_principal: data.medida_principal || false,
         estado: 1
       };
       
@@ -370,8 +319,9 @@ const MedidasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Medida creada",
-        description: "La medida ha sido creada exitosamente",
+        title: "✅ Medida Creada",
+        description: "La nueva medida ha sido creada exitosamente y está lista para usar.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['medidas'] });
       setActiveTab("medidas");
@@ -381,9 +331,10 @@ const MedidasPage: React.FC = () => {
       stopLoading();
       console.error('Error al crear medida:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al crear la medida',
+        title: '❌ Error al Crear',
+        description: error.message || 'No se pudo crear la medida. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -394,8 +345,9 @@ const MedidasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Medida actualizada",
-        description: "La medida ha sido actualizada exitosamente",
+        title: "✅ Medida Actualizada",
+        description: "Los cambios en la medida han sido guardados exitosamente.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['medidas'] });
       setActiveTab("medidas");
@@ -405,9 +357,10 @@ const MedidasPage: React.FC = () => {
       stopLoading();
       console.error('Error al actualizar medida:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al actualizar la medida',
+        title: '❌ Error al Actualizar',
+        description: error.message || 'No se pudo actualizar la medida. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -417,16 +370,18 @@ const MedidasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medidas'] });
       toast({
-        title: 'Éxito',
-        description: 'Medida activada correctamente',
+        title: '✅ Medida Activada',
+        description: 'La medida ha sido activada correctamente y está disponible para uso.',
+        className: "bg-green-50 border-green-200 text-green-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al activar medida:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al activar la medida',
+        title: '❌ Error al Activar',
+        description: error.message || 'No se pudo activar la medida. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -436,16 +391,39 @@ const MedidasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['medidas'] });
       toast({
-        title: 'Éxito',
-        description: 'Medida desactivada correctamente',
+        title: '⚠️ Medida Desactivada',
+        description: 'La medida ha sido desactivada y ya no está disponible para uso.',
+        className: "bg-yellow-50 border-yellow-200 text-yellow-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al desactivar medida:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al desactivar la medida',
+        title: '❌ Error al Desactivar',
+        description: error.message || 'No se pudo desactivar la medida. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    },
+  });
+
+  const deleteMedidaMutation = useMutation({
+    mutationFn: medidasService.deleteMedidaPermanent,
+    onSuccess: (deletedMedida) => {
+      queryClient.invalidateQueries({ queryKey: ['medidas'] });
+      toast({
+        title: '✅ Medida Eliminada',
+        description: `La medida "${deletedMedida.nombre}" ha sido eliminada permanentemente de la base de datos`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error al eliminar medida:', error);
+      toast({
+        title: '❌ Error al Eliminar',
+        description: error.message || 'No se pudo eliminar la medida. Verifique que no tenga referencias en otras tablas.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -487,6 +465,10 @@ const MedidasPage: React.FC = () => {
 
   const handleDeactivateMedida = (id: number) => {
     deactivateMedidaMutation.mutate(id);
+  };
+
+  const handleDeleteMedida = (id: number) => {
+    deleteMedidaMutation.mutate(id);
   };
 
   return (
@@ -578,13 +560,15 @@ const MedidasPage: React.FC = () => {
                       <TableHead className="px-4 py-3 w-24">Abreviatura</TableHead>
                       <TableHead className="px-4 py-3">Clase</TableHead>
                       <TableHead className="px-4 py-3 w-20">Cantidad</TableHead>
+                      <TableHead className="px-4 py-3 w-24">Valor Excedente</TableHead>
+                      <TableHead className="px-4 py-3 w-24">Principal</TableHead>
                       <TableHead className="px-4 py-3 w-24">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
+                        <TableCell colSpan={9} className="h-24 text-center">
                           <div className="flex items-center justify-center">
                             <Loader2 className="h-6 w-6 animate-spin mr-2" />
                             Cargando medidas...
@@ -593,7 +577,7 @@ const MedidasPage: React.FC = () => {
                       </TableRow>
                     ) : medidasFiltradas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center">
+                        <TableCell colSpan={9} className="h-24 text-center">
                           No hay medidas disponibles.
                         </TableCell>
                       </TableRow>
@@ -702,6 +686,75 @@ const MedidasPage: React.FC = () => {
                                 </Can>
                               )}
 
+                              {/* Botón de eliminar para medidas inactivas */}
+                              {medida.estado === 0 && (
+                                <Can action="accion-eliminar-medida">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Eliminar medida"
+                                            >
+                                              <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Eliminar permanentemente</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="flex items-center gap-2">
+                                          <Trash2 className="h-5 w-5 text-red-600" />
+                                          Confirmar Eliminación
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription className="space-y-3">
+                                          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                                              <AlertTriangle className="h-4 w-4" />
+                                              ADVERTENCIA
+                                            </div>
+                                            <p className="text-red-700 text-sm">
+                                              ¿Estás seguro de que deseas eliminar permanentemente la medida <strong>"{medida.nombre}"</strong>?
+                                            </p>
+                                          </div>
+                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                                              <Info className="h-4 w-4" />
+                                              IMPACTO
+                                            </div>
+                                            <ul className="text-yellow-700 text-sm space-y-1">
+                                              <li>• La medida será eliminada permanentemente de la base de datos</li>
+                                              <li>• Los productos asociados a esta medida perderán la referencia</li>
+                                              <li>• Esta acción no se puede deshacer</li>
+                                            </ul>
+                                          </div>
+                                          <p className="text-gray-600">
+                                            ¿Estás completamente seguro de que deseas continuar con esta eliminación?
+                                          </p>
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteMedida(medida.id!)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Sí, Eliminar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              )}
+
                             </div>
                           </TableCell>
                           <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-20">
@@ -718,6 +771,20 @@ const MedidasPage: React.FC = () => {
                           </TableCell>
                           <TableCell className="px-3 py-2 text-sm text-gray-900 w-20">
                             {medida.cantidad}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
+                            {medida.val_excedente || "0.00"}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
+                            {medida.medida_principal ? (
+                              <Badge variant="default" className="bg-blue-100 text-blue-800">
+                                Sí
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="bg-gray-100 text-gray-800">
+                                No
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell className="px-3 py-2">
                             <Badge

@@ -41,6 +41,7 @@ const menuItems = [
       { title: "Lineas", path: "/lineas", icon: <Layers className="h-4 w-4" /> },
       { title: "SubLineas", path: "/sublineas", icon: <Tag className="h-4 w-4" /> },
       { title: "Medidas", path: "/medidas", icon: <Ruler className="h-4 w-4" /> },
+      { title: "Tipos", path: "/tipos", icon: <Tag className="h-4 w-4" /> },
       { title: "Productos", path: "/productos", icon: <Box className="h-4 w-4" /> },
     ],
   },

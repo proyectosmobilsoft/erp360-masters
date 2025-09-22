@@ -32,7 +32,13 @@ import {
   Loader2, 
   Save, 
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Trash2,
+  AlertTriangle,
+  Info,
+  Upload,
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
 import { categoriasService, CategoriaData, CategoriaForm } from '@/services/categoriasService';
 
@@ -182,15 +188,12 @@ const CategoriaFormComponent: React.FC<CategoriaFormComponentProps> = ({
               </Select>
             </div>
 
-            {/* Ruta de Imagen */}
-            <div className="col-span-6 space-y-2">
-              <Label htmlFor="imgruta" className="text-sm font-medium">Ruta de Imagen</Label>
-              <Input
-                id="imgruta"
+            {/* Imagen de la Categoría */}
+            <div className="col-span-6">
+              <ImageUpload
                 value={formData.imgruta}
-                onChange={(e) => handleInputChange('imgruta', e.target.value)}
-                className="h-8 text-sm"
-                autoComplete="off"
+                onChange={(value) => handleInputChange('imgruta', value)}
+                onRemove={() => handleInputChange('imgruta', '')}
               />
             </div>
           </div>
@@ -225,6 +228,225 @@ const CategoriaFormComponent: React.FC<CategoriaFormComponentProps> = ({
           </div>
         </form>
       </div>
+    </div>
+  );
+};
+
+// Image Upload Component
+interface ImageUploadProps {
+  value: string | undefined;
+  onChange: (value: string) => void;
+  onRemove: () => void;
+}
+
+const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange, onRemove }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleFileSelect = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: '❌ Archivo Inválido',
+        description: 'Por favor selecciona un archivo de imagen válido (PNG, JPG, GIF)',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: '❌ Archivo Demasiado Grande',
+        description: 'La imagen es demasiado grande. El tamaño máximo permitido es 5MB',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const compressedFile = await compressImage(file);
+      const base64 = await convertToBase64(compressedFile);
+      onChange(base64);
+      toast({
+        title: '✅ Imagen Cargada',
+        description: 'La imagen se ha comprimido y cargado correctamente en base64',
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    } catch (error) {
+      console.error('Error converting image to base64:', error);
+      toast({
+        title: '❌ Error al Procesar',
+        description: 'Error al procesar la imagen. Intenta con otro archivo',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const compressImage = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      img.onload = () => {
+        // Calcular nuevas dimensiones (máximo 800x600)
+        const maxWidth = 800;
+        const maxHeight = 600;
+        let { width, height } = img;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = (width * maxHeight) / height;
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Dibujar la imagen redimensionada
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        // Convertir a blob con compresión
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Error al comprimir la imagen'));
+            }
+          },
+          'image/jpeg',
+          0.8 // Calidad de compresión (0.8 = 80%)
+        );
+      };
+
+      img.onerror = () => reject(new Error('Error al cargar la imagen'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium">Imagen de la Categoría</Label>
+      
+      {value && value.trim() !== '' ? (
+        <div className="relative group">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50">
+            <div className="flex items-center justify-center">
+              <img
+                src={value}
+                alt="Imagen de categoría"
+                className="max-h-32 max-w-32 object-contain rounded-lg"
+              />
+            </div>
+            <div className="mt-2 text-center">
+              <p className="text-sm text-gray-600">Imagen cargada correctamente</p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={onRemove}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      ) : (
+        <div
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer ${
+            isDragOver
+              ? 'border-cyan-500 bg-cyan-50'
+              : 'border-gray-300 hover:border-cyan-400 hover:bg-gray-50'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById('image-upload-input')?.click()}
+        >
+          <input
+            id="image-upload-input"
+            type="file"
+            accept="image/*"
+            onChange={handleFileInput}
+            className="hidden"
+          />
+          
+          {isLoading ? (
+            <div className="flex flex-col items-center space-y-2">
+              <Loader2 className="h-8 w-8 text-cyan-600 animate-spin" />
+              <p className="text-sm text-gray-600">Procesando imagen...</p>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center space-y-2">
+              <div className="p-3 bg-cyan-100 rounded-full">
+                <Upload className="h-6 w-6 text-cyan-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-900">
+                  Arrastra una imagen aquí o haz clic para seleccionar
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  PNG, JPG, GIF hasta 5MB (se comprimirá automáticamente)
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -270,8 +492,9 @@ const CategoriasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Categoría creada",
-        description: "La categoría ha sido creada exitosamente",
+        title: "✅ Categoría Creada",
+        description: "La nueva categoría ha sido creada exitosamente y está lista para usar.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['categorias'] });
       setActiveTab("categorias");
@@ -281,9 +504,10 @@ const CategoriasPage: React.FC = () => {
       stopLoading();
       console.error('Error al crear categoría:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al crear la categoría',
+        title: '❌ Error al Crear',
+        description: error.message || 'No se pudo crear la categoría. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -294,8 +518,9 @@ const CategoriasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Categoría actualizada",
-        description: "La categoría ha sido actualizada exitosamente",
+        title: "✅ Categoría Actualizada",
+        description: "Los cambios en la categoría han sido guardados exitosamente.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['categorias'] });
       setActiveTab("categorias");
@@ -305,9 +530,10 @@ const CategoriasPage: React.FC = () => {
       stopLoading();
       console.error('Error al actualizar categoría:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al actualizar la categoría',
+        title: '❌ Error al Actualizar',
+        description: error.message || 'No se pudo actualizar la categoría. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -317,16 +543,18 @@ const CategoriasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categorias'] });
       toast({
-        title: 'Éxito',
-        description: 'Categoría activada correctamente',
+        title: '✅ Categoría Activada',
+        description: 'La categoría ha sido activada correctamente y está disponible para uso.',
+        className: "bg-green-50 border-green-200 text-green-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al activar categoría:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al activar la categoría',
+        title: '❌ Error al Activar',
+        description: error.message || 'No se pudo activar la categoría. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -336,16 +564,39 @@ const CategoriasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categorias'] });
       toast({
-        title: 'Éxito',
-        description: 'Categoría desactivada correctamente',
+        title: '⚠️ Categoría Desactivada',
+        description: 'La categoría ha sido desactivada y ya no está disponible para uso.',
+        className: "bg-yellow-50 border-yellow-200 text-yellow-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al desactivar categoría:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al desactivar la categoría',
+        title: '❌ Error al Desactivar',
+        description: error.message || 'No se pudo desactivar la categoría. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    },
+  });
+
+  const deleteCategoriaMutation = useMutation({
+    mutationFn: categoriasService.deleteCategoriaPermanent,
+    onSuccess: (deletedCategoria) => {
+      queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      toast({
+        title: '✅ Categoría Eliminada',
+        description: `La categoría "${deletedCategoria.nombre}" ha sido eliminada permanentemente de la base de datos.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error al eliminar categoría:', error);
+      toast({
+        title: '❌ Error al Eliminar',
+        description: error.message || 'No se pudo eliminar la categoría. Verifique que no tenga referencias en otras tablas.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -385,6 +636,10 @@ const CategoriasPage: React.FC = () => {
 
   const handleDeactivateCategoria = (id: number) => {
     deactivateCategoriaMutation.mutate(id);
+  };
+
+  const handleDeleteCategoria = (id: number) => {
+    deleteCategoriaMutation.mutate(id);
   };
 
   return (
@@ -592,6 +847,75 @@ const CategoriasPage: React.FC = () => {
                                           onClick={() => handleActivateCategoria(categoria.id!)}
                                         >
                                           Activar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              )}
+
+                              {/* Botón de eliminar para categorías inactivas */}
+                              {categoria.estado === 0 && (
+                                <Can action="accion-eliminar-categoria">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Eliminar categoría"
+                                            >
+                                              <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Eliminar permanentemente</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="flex items-center gap-2">
+                                          <Trash2 className="h-5 w-5 text-red-600" />
+                                          Confirmar Eliminación
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription className="space-y-3">
+                                          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                                              <AlertTriangle className="h-4 w-4" />
+                                              ADVERTENCIA
+                                            </div>
+                                            <p className="text-red-700 text-sm">
+                                              ¿Estás seguro de que deseas eliminar permanentemente la categoría <strong>"{categoria.nombre}"</strong>?
+                                            </p>
+                                          </div>
+                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                                              <Info className="h-4 w-4" />
+                                              IMPACTO
+                                            </div>
+                                            <ul className="text-yellow-700 text-sm space-y-1">
+                                              <li>• La categoría será eliminada permanentemente de la base de datos</li>
+                                              <li>• Los productos asociados a esta categoría perderán la referencia</li>
+                                              <li>• Esta acción no se puede deshacer</li>
+                                            </ul>
+                                          </div>
+                                          <p className="text-gray-600">
+                                            ¿Estás completamente seguro de que deseas continuar con esta eliminación?
+                                          </p>
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteCategoria(categoria.id!)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Sí, Eliminar
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
                                     </AlertDialogContent>

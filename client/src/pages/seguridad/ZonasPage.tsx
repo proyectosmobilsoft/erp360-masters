@@ -68,7 +68,7 @@ const ZonasPage = () => {
     id_unidad_servicio: number;
     no_ppl: number;
     nombre_servicio: string;
-    municipio: string;
+    sucursal: string;
   }>>([]);
 
   const { toast } = useToast();
@@ -290,7 +290,7 @@ const ZonasPage = () => {
         id_unidad_servicio: detalle.id_unidad_servicio,
         no_ppl: detalle.no_ppl || 0,
         nombre_servicio: detalle.prod_unidad_servicios?.nombre_servicio || "",
-        municipio: detalle.prod_unidad_servicios?.gen_municipios?.nombre || ""
+        sucursal: detalle.prod_unidad_servicios?.gen_sucursales?.nombre || ""
       }));
       
       // Actualizar estado con las unidades de la zona
@@ -741,7 +741,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
           id_unidad_servicio: unidadId,
           no_ppl: unidad.no_ppl || 0,
           nombre_servicio: unidad.nombre_servicio,
-          municipio: unidad.gen_municipios?.nombre || ""
+          sucursal: unidad.gen_sucursales?.nombre || ""
         }]);
       }
     } else {
@@ -814,7 +814,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
             <TableRow>
               <TableHead className="font-semibold text-gray-700 text-sm py-2">Codigo</TableHead>
               <TableHead className="font-semibold text-gray-700 text-sm py-2">Unidad De Servicio</TableHead>
-              <TableHead className="font-semibold text-gray-700 text-sm py-2">Municipio</TableHead>
+              <TableHead className="font-semibold text-gray-700 text-sm py-2">Sucursal</TableHead>
               <TableHead className="font-semibold text-gray-700 text-sm py-2">No PPL</TableHead>
               <TableHead className="font-semibold text-gray-700 text-sm py-2 w-12"></TableHead>
             </TableRow>
@@ -851,7 +851,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                           {unidadesServicio.map((unidad) => (
                             <CommandItem
                               key={unidad.id}
-                              value={`${unidad.nombre_servicio} ${unidad.gen_municipios?.nombre}`}
+                              value={`${unidad.nombre_servicio} ${unidad.gen_sucursales?.nombre}`}
                               onSelect={() => {
                                 handleInputChange('unidadServicioId', unidad.id || 0);
                                 // Actualizar el No PPL con el valor de la unidad seleccionada
@@ -868,7 +868,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                               />
                               <div className="flex flex-col">
                                 <span className="font-medium">{unidad.nombre_servicio}</span>
-                                <span className="text-xs text-gray-500">{unidad.gen_municipios?.nombre}</span>
+                                <span className="text-xs text-gray-500">{unidad.gen_sucursales?.nombre}</span>
                               </div>
                             </CommandItem>
                           ))}
@@ -880,7 +880,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
               </TableCell>
               <TableCell className="py-2">
                 <div className="h-8 flex items-center px-3 border border-gray-300 rounded-md bg-white text-sm text-gray-700">
-                  {unidadesServicio.find(u => u.id === formData.unidadServicioId)?.gen_municipios?.nombre || ""}
+                  {unidadesServicio.find(u => u.id === formData.unidadServicioId)?.gen_sucursales?.nombre || ""}
                 </div>
               </TableCell>
               <TableCell className="py-2">
@@ -933,7 +933,7 @@ const ZonaForm: React.FC<ZonaFormProps> = ({
                   <TableRow key={unidad.id_unidad_servicio} className="hover:bg-gray-50">
                     <TableCell className="font-medium text-xs py-1 px-2">{unidadServicio?.codigo || ""}</TableCell>
                     <TableCell className="text-xs py-1 px-2">{unidad.nombre_servicio}</TableCell>
-                    <TableCell className="text-xs py-1 px-2">{unidad.municipio}</TableCell>
+                    <TableCell className="text-xs py-1 px-2">{unidad.sucursal}</TableCell>
                     <TableCell className="text-xs py-1 px-2 font-medium">{unidad.no_ppl}</TableCell>
                     <TableCell className="py-1 px-2">
                       <Button

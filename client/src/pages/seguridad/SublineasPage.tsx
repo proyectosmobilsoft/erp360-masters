@@ -32,7 +32,10 @@ import {
   Loader2, 
   Save, 
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Trash2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { sublineasService, SublineaData, SublineaForm, LineaData } from '@/services/sublineasService';
 
@@ -56,7 +59,6 @@ const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
 }) => {
   const [formData, setFormData] = useState<SublineaForm>({
     id_linea: sublinea?.id_linea || 0,
-    id_componente_menu: sublinea?.id_componente_menu || 0,
     codigo: sublinea?.codigo || "",
     nombre: sublinea?.nombre || "",
   });
@@ -84,7 +86,6 @@ const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
     setFormData({
       id: sublinea?.id || 0,
       id_linea: sublinea?.id_linea || 0,
-      id_componente_menu: sublinea?.id_componente_menu || 0,
       codigo: sublinea?.codigo || "",
       nombre: sublinea?.nombre || "",
     });
@@ -170,18 +171,6 @@ const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
 
           {/* Segunda fila */}
           <div className="grid grid-cols-12 gap-4">
-            {/* Componente Menú */}
-            <div className="col-span-6 space-y-2">
-              <Label htmlFor="id_componente_menu" className="text-sm font-medium">Componente Menú</Label>
-              <Input
-                id="id_componente_menu"
-                type="number"
-                value={formData.id_componente_menu || ""}
-                onChange={(e) => handleInputChange('id_componente_menu', parseInt(e.target.value) || 0)}
-                className="h-8 text-sm"
-                autoComplete="off"
-              />
-            </div>
           </div>
 
           {/* Botones */}
@@ -254,7 +243,6 @@ const SublineasPage: React.FC = () => {
       const sublineaData = {
         id: 0, // ID temporal para creación
         id_linea: data.id_linea,
-        id_componente_menu: data.id_componente_menu || 0,
         codigo: data.codigo!,
         nombre: data.nombre,
         estado: 1
@@ -265,8 +253,9 @@ const SublineasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Sublínea creada",
-        description: "La sublínea ha sido creada exitosamente",
+        title: "✅ Sublínea Creada",
+        description: "La nueva sublínea ha sido creada exitosamente y está lista para usar.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['sublineas'] });
       setActiveTab("sublineas");
@@ -276,9 +265,10 @@ const SublineasPage: React.FC = () => {
       stopLoading();
       console.error('Error al crear sublínea:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al crear la sublínea',
+        title: '❌ Error al Crear',
+        description: error.message || 'No se pudo crear la sublínea. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -289,8 +279,9 @@ const SublineasPage: React.FC = () => {
     onSuccess: () => {
       stopLoading();
       toast({
-        title: "Sublínea actualizada",
-        description: "La sublínea ha sido actualizada exitosamente",
+        title: "✅ Sublínea Actualizada",
+        description: "Los cambios en la sublínea han sido guardados exitosamente.",
+        className: "bg-green-50 border-green-200 text-green-800",
       });
       queryClient.invalidateQueries({ queryKey: ['sublineas'] });
       setActiveTab("sublineas");
@@ -300,9 +291,10 @@ const SublineasPage: React.FC = () => {
       stopLoading();
       console.error('Error al actualizar sublínea:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al actualizar la sublínea',
+        title: '❌ Error al Actualizar',
+        description: error.message || 'No se pudo actualizar la sublínea. Verifique los datos e intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -312,16 +304,18 @@ const SublineasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sublineas'] });
       toast({
-        title: 'Éxito',
-        description: 'Sublínea activada correctamente',
+        title: '✅ Sublínea Activada',
+        description: 'La sublínea ha sido activada correctamente y está disponible para uso.',
+        className: "bg-green-50 border-green-200 text-green-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al activar sublínea:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al activar la sublínea',
+        title: '❌ Error al Activar',
+        description: error.message || 'No se pudo activar la sublínea. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -331,16 +325,39 @@ const SublineasPage: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sublineas'] });
       toast({
-        title: 'Éxito',
-        description: 'Sublínea desactivada correctamente',
+        title: '⚠️ Sublínea Desactivada',
+        description: 'La sublínea ha sido desactivada y ya no está disponible para uso.',
+        className: "bg-yellow-50 border-yellow-200 text-yellow-800",
       });
     },
     onError: (error: any) => {
       console.error('Error al desactivar sublínea:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Error al desactivar la sublínea',
+        title: '❌ Error al Desactivar',
+        description: error.message || 'No se pudo desactivar la sublínea. Intente nuevamente.',
         variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    },
+  });
+
+  const deleteSublineaMutation = useMutation({
+    mutationFn: sublineasService.deleteSublineaPermanent,
+    onSuccess: (deletedSublinea) => {
+      queryClient.invalidateQueries({ queryKey: ['sublineas'] });
+      toast({
+        title: '✅ Sublínea Eliminada',
+        description: `La sublínea "${deletedSublinea.nombre}" ha sido eliminada permanentemente de la base de datos`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error al eliminar sublínea:', error);
+      toast({
+        title: '❌ Error al Eliminar',
+        description: error.message || 'No se pudo eliminar la sublínea. Verifique que no tenga referencias en otras tablas.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -381,6 +398,10 @@ const SublineasPage: React.FC = () => {
 
   const handleDeactivateSublinea = (id: number) => {
     deactivateSublineaMutation.mutate(id);
+  };
+
+  const handleDeleteSublinea = (id: number) => {
+    deleteSublineaMutation.mutate(id);
   };
 
   return (
@@ -587,6 +608,75 @@ const SublineasPage: React.FC = () => {
                                           onClick={() => handleActivateSublinea(sublinea.id!)}
                                         >
                                           Activar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              )}
+
+                              {/* Botón de eliminar para sublíneas inactivas */}
+                              {sublinea.estado === 0 && (
+                                <Can action="accion-eliminar-sublinea">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Eliminar sublínea"
+                                            >
+                                              <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Eliminar permanentemente</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="flex items-center gap-2">
+                                          <Trash2 className="h-5 w-5 text-red-600" />
+                                          Confirmar Eliminación
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription className="space-y-3">
+                                          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                                              <AlertTriangle className="h-4 w-4" />
+                                              ADVERTENCIA
+                                            </div>
+                                            <p className="text-red-700 text-sm">
+                                              ¿Estás seguro de que deseas eliminar permanentemente la sublínea <strong>"{sublinea.nombre}"</strong>?
+                                            </p>
+                                          </div>
+                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                                              <Info className="h-4 w-4" />
+                                              IMPACTO
+                                            </div>
+                                            <ul className="text-yellow-700 text-sm space-y-1">
+                                              <li>• La sublínea será eliminada permanentemente de la base de datos</li>
+                                              <li>• Los productos asociados a esta sublínea perderán la referencia</li>
+                                              <li>• Esta acción no se puede deshacer</li>
+                                            </ul>
+                                          </div>
+                                          <p className="text-gray-600">
+                                            ¿Estás completamente seguro de que deseas continuar con esta eliminación?
+                                          </p>
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteSublinea(sublinea.id!)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Sí, Eliminar
                                         </AlertDialogAction>
                                       </AlertDialogFooter>
                                     </AlertDialogContent>

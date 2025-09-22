@@ -137,18 +137,48 @@ export const deleteCategoriaPermanent = async (id: number): Promise<{ id: number
     // Primero obtener la categoría para el retorno
     const { data: categoria, error: fetchError } = await supabase
       .from('inv_categorias')
-      .select('id, nombre')
+      .select('id, nombre, estado')
       .eq('id', id)
       .single();
 
     if (fetchError) {
       console.error('Error al obtener categoría:', fetchError);
-      throw fetchError;
+      throw new Error(`No se pudo encontrar la categoría con ID ${id}`);
     }
 
     console.log('📋 Categoría encontrada:', categoria);
 
-    // Intentar eliminación directa primero
+    // Verificar que la categoría esté inactiva antes de eliminar
+    if (categoria.estado === 1) {
+      throw new Error('No se puede eliminar una categoría activa. Primero debe desactivarla.');
+    }
+
+    // Verificar si hay referencias en otras tablas
+    const { data: lineasRef, error: lineasError } = await supabase
+      .from('inv_lineas')
+      .select('id')
+      .eq('id_categoria', id)
+      .limit(1);
+
+    if (lineasError) {
+      console.error('Error al verificar referencias en líneas:', lineasError);
+    } else if (lineasRef && lineasRef.length > 0) {
+      throw new Error('No se puede eliminar la categoría porque tiene líneas asociadas.');
+    }
+
+    const { data: productosRef, error: productosError } = await supabase
+      .from('inv_productos')
+      .select('id')
+      .eq('id_categoria', id)
+      .limit(1);
+
+    if (productosError) {
+      console.error('Error al verificar referencias en productos:', productosError);
+    } else if (productosRef && productosRef.length > 0) {
+      throw new Error('No se puede eliminar la categoría porque tiene productos asociados.');
+    }
+
+    // Realizar la eliminación
     const { error: deleteError } = await supabase
       .from('inv_categorias')
       .delete()
@@ -156,7 +186,7 @@ export const deleteCategoriaPermanent = async (id: number): Promise<{ id: number
 
     if (deleteError) {
       console.error('Error al eliminar categoría:', deleteError);
-      throw deleteError;
+      throw new Error(`Error al eliminar la categoría: ${deleteError.message}`);
     }
 
     console.log('✅ Categoría eliminada exitosamente');

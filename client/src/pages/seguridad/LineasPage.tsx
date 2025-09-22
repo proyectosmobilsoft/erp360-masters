@@ -9,30 +9,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/contexts/LoadingContext';
 import { Can } from '@/contexts/PermissionsContext';
-import { 
-  Tag, 
-  Plus, 
-  Edit, 
-  Lock, 
-  Search, 
-  Loader2, 
-  Save, 
+import {
+  Tag,
+  Plus,
+  Edit,
+  Lock,
+  Search,
+  Loader2,
+  Save,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Trash2,
+  AlertTriangle,
+  Info
 } from 'lucide-react';
 import { lineasService, LineaData, LineaForm, CategoriaData } from '@/services/lineasService';
 
@@ -46,12 +49,12 @@ interface LineaFormComponentProps {
   onCancel: () => void;
 }
 
-const LineaFormComponent: React.FC<LineaFormComponentProps> = ({ 
-  linea, 
+const LineaFormComponent: React.FC<LineaFormComponentProps> = ({
+  linea,
   editingLinea,
   categorias,
-  onSubmit, 
-  isLoading, 
+  onSubmit,
+  isLoading,
   onCancel
 }) => {
   const [formData, setFormData] = useState<LineaForm>({
@@ -97,7 +100,7 @@ const LineaFormComponent: React.FC<LineaFormComponentProps> = ({
     if (field === 'codigo' && !editingLinea) {
       return;
     }
-    
+
     setFormData(prev => ({
       ...prev,
       [field]: value
@@ -238,7 +241,7 @@ const LineasPage: React.FC = () => {
         id_categoria: data.id_categoria,
         estado: 1
       };
-      
+
       return await lineasService.createLinea(lineaData);
     },
     onSuccess: () => {
@@ -303,21 +306,22 @@ const LineasPage: React.FC = () => {
     onSuccess: (data) => {
       console.log("🎉 onSuccess llamado con data:", data);
       toast({
-        title: "Línea eliminada",
-        description: `La línea ha sido eliminada permanentemente con todas sus dependencias`,
+        title: "✅ Línea Eliminada",
+        description: `La línea ha sido eliminada permanentemente de la base de datos`,
+        className: "bg-green-50 border-green-200 text-green-800",
       });
-      
+
       // Invalidar y refetch inmediatamente
       queryClient.invalidateQueries({ queryKey: ['lineas'] });
       queryClient.refetchQueries({ queryKey: ['lineas'] });
-      
+
       console.log("🔄 Query invalidada y refetch ejecutado");
     },
     onError: (error: any) => {
       console.error("❌ onError llamado con error:", error);
-      
+
       let errorMessage = "Hubo un error al eliminar la línea";
-      
+
       // Verificar si es un error de restricción de clave foránea
       if (error.code === "23503" || error.message?.includes("foreign key constraint")) {
         errorMessage = "No se puede eliminar la línea porque tiene sublíneas o productos asociados. Primero elimine las sublíneas y productos relacionados.";
@@ -326,11 +330,12 @@ const LineasPage: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
-        title: "Error al eliminar línea",
+        title: "❌ Error al Eliminar",
         description: errorMessage,
         variant: "destructive",
+        className: "bg-red-50 border-red-200 text-red-800",
       });
     },
   });
@@ -385,15 +390,15 @@ const LineasPage: React.FC = () => {
   const lineasFiltradas = useMemo(() => {
     console.log("🔍 Filtrando líneas. Total:", lineas.length, "Filtros:", { searchTerm, statusFilter });
     const filtered = (lineas as LineaData[]).filter((linea: LineaData) => {
-      const matchesSearch = 
+      const matchesSearch =
         linea.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         linea.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         linea.inv_categorias?.nombre.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === "all" || 
+
+      const matchesStatus = statusFilter === "all" ||
         (statusFilter === "active" && linea.estado === 1) ||
         (statusFilter === "inactive" && linea.estado === 0);
-      
+
       return matchesSearch && matchesStatus;
     });
     console.log("🔍 Líneas filtradas:", filtered.length, "IDs:", filtered.map(l => l.id));
@@ -433,7 +438,7 @@ const LineasPage: React.FC = () => {
           Gestión de Líneas
         </h1>
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-cyan-100/60 p-1 rounded-lg">
           <TabsTrigger
@@ -533,110 +538,180 @@ const LineasPage: React.FC = () => {
                     ) : (
                       lineasFiltradas.map((linea: LineaData) => (
                         <TableRow key={linea.id} className="hover:bg-gray-50">
-                                      <TableCell className="px-2 py-1">
-                                        <div className="flex items-center justify-start gap-1">
-                                          <Can action="accion-editar-linea">
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleEditarLinea(linea)}
-                                                    aria-label="Editar línea"
-                                                  >
-                                                    <Edit className="h-5 w-5 text-cyan-600 hover:text-cyan-800 transition-colors" />
-                                                  </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  <p>Editar</p>
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          </Can>
+                          <TableCell className="px-2 py-1">
+                            <div className="flex items-center justify-start gap-1">
+                              <Can action="accion-editar-linea">
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleEditarLinea(linea)}
+                                        aria-label="Editar línea"
+                                      >
+                                        <Edit className="h-5 w-5 text-cyan-600 hover:text-cyan-800 transition-colors" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Editar</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </Can>
 
-                                          {linea.estado === 1 ? (
-                                            <Can action="accion-desactivar-linea">
-                                              <AlertDialog>
-                                                <TooltipProvider>
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <AlertDialogTrigger asChild>
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="icon"
-                                                          aria-label="Inactivar línea"
-                                                        >
-                                                          <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
-                                                        </Button>
-                                                      </AlertDialogTrigger>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                      <p>Inactivar</p>
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                </TooltipProvider>
-                                                <AlertDialogContent>
-                                                  <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                      Esta acción inactivará la línea "{linea.nombre}".
-                                                    </AlertDialogDescription>
-                                                  </AlertDialogHeader>
-                                                  <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                      onClick={() => handleDeactivateLinea(linea.id!)}
-                                                    >
-                                                      Inactivar
-                                                    </AlertDialogAction>
-                                                  </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                              </AlertDialog>
-                                            </Can>
-                                          ) : (
-                                            <Can action="accion-activar-linea">
-                                              <AlertDialog>
-                                                <TooltipProvider>
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <AlertDialogTrigger asChild>
-                                                        <Button
-                                                          variant="ghost"
-                                                          size="icon"
-                                                          aria-label="Activar línea"
-                                                        >
-                                                          <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
-                                                        </Button>
-                                                      </AlertDialogTrigger>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                      <p>Activar</p>
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                </TooltipProvider>
-                                                <AlertDialogContent>
-                                                  <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                      Esta acción activará la línea "{linea.nombre}".
-                                                    </AlertDialogDescription>
-                                                  </AlertDialogHeader>
-                                                  <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction
-                                                      onClick={() => handleActivateLinea(linea.id!)}
-                                                    >
-                                                      Activar
-                                                    </AlertDialogAction>
-                                                  </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                              </AlertDialog>
-                                            </Can>
-                                          )}
+                              {linea.estado === 1 ? (
+                                <Can action="accion-desactivar-linea">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Inactivar línea"
+                                            >
+                                              <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Inactivar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta acción inactivará la línea "{linea.nombre}".
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeactivateLinea(linea.id!)}
+                                        >
+                                          Inactivar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              ) : (
+                                <Can action="accion-activar-linea">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Activar línea"
+                                            >
+                                              <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Activar</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Esta acción activará la línea "{linea.nombre}".
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleActivateLinea(linea.id!)}
+                                        >
+                                          Activar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              )}
 
-                                        </div>
-                                      </TableCell>
+                              {/* Botón de eliminar para líneas inactivas */}
+                              {linea.estado === 0 && (
+                                <Can action="accion-eliminar-linea">
+                                  <AlertDialog>
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <AlertDialogTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              aria-label="Eliminar línea"
+                                            >
+                                              <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
+                                            </Button>
+                                          </AlertDialogTrigger>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Eliminar permanentemente</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle className="flex items-center gap-2">
+                                          <Trash2 className="h-5 w-5 text-red-600" />
+                                          Confirmar Eliminación
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription className="space-y-3">
+                                          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
+                                              <AlertTriangle className="h-4 w-4" />
+                                              ADVERTENCIA
+                                            </div>
+                                            <p className="text-red-700 text-sm">
+                                              ¿Estás seguro de que deseas eliminar permanentemente la línea <strong>"{linea.nombre}"</strong>?
+                                            </p>
+                                          </div>
+                                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                            <div className="flex items-center gap-2 text-yellow-800 font-semibold mb-2">
+                                              <Info className="h-4 w-4" />
+                                              IMPACTO
+                                            </div>
+                                            <ul className="text-yellow-700 text-sm space-y-1">
+                                              <li>• La línea será eliminada permanentemente de la base de datos</li>
+                                              <li>• Las sublíneas asociadas a esta línea perderán la referencia</li>
+                                              <li>• Los productos asociados a esta línea perderán la referencia</li>
+                                              <li>• Esta acción no se puede deshacer</li>
+                                            </ul>
+                                          </div>
+                                          <p className="text-gray-600">
+                                            ¿Estás completamente seguro de que deseas continuar con esta eliminación?
+                                          </p>
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() => handleDeleteLinea(linea.id!)}
+                                          className="bg-red-600 hover:bg-red-700"
+                                        >
+                                          <Trash2 className="h-4 w-4 mr-2" />
+                                          Sí, Eliminar
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </Can>
+                              )}
+
+                            </div>
+                          </TableCell>
                           <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-20">
                             {linea.codigo}
                           </TableCell>

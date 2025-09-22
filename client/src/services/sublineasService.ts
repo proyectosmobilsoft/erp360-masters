@@ -3,7 +3,6 @@ import { supabase } from './supabaseClient';
 export interface SublineaData {
   id: number;
   id_linea: number;
-  id_componente_menu?: number;
   codigo: string;
   nombre: string;
   estado: number;
@@ -16,7 +15,6 @@ export interface SublineaData {
 export interface SublineaForm {
   id?: number;
   id_linea: number;
-  id_componente_menu?: number;
   codigo: string;
   nombre: string;
   estado?: number;
@@ -187,18 +185,36 @@ export const deleteSublineaPermanent = async (id: number): Promise<{ id: number;
     // Primero obtener la sublínea para el retorno
     const { data: sublinea, error: fetchError } = await supabase
       .from('inv_sublineas')
-      .select('id, nombre')
+      .select('id, nombre, estado')
       .eq('id', id)
       .single();
 
     if (fetchError) {
       console.error('Error al obtener sublínea:', fetchError);
-      throw fetchError;
+      throw new Error(`No se pudo encontrar la sublínea con ID ${id}`);
     }
 
     console.log('📋 Sublínea encontrada:', sublinea);
 
-    // Intentar eliminación directa primero
+    // Verificar que la sublínea esté inactiva antes de eliminar
+    if (sublinea.estado === 1) {
+      throw new Error('No se puede eliminar una sublínea activa. Primero debe desactivarla.');
+    }
+
+    // Verificar si hay referencias en otras tablas
+    const { data: productosRef, error: productosError } = await supabase
+      .from('inv_productos')
+      .select('id')
+      .eq('id_sublinea', id)
+      .limit(1);
+
+    if (productosError) {
+      console.error('Error al verificar referencias en productos:', productosError);
+    } else if (productosRef && productosRef.length > 0) {
+      throw new Error('No se puede eliminar la sublínea porque tiene productos asociados.');
+    }
+
+    // Realizar la eliminación
     const { error: deleteError } = await supabase
       .from('inv_sublineas')
       .delete()
@@ -206,7 +222,7 @@ export const deleteSublineaPermanent = async (id: number): Promise<{ id: number;
 
     if (deleteError) {
       console.error('Error al eliminar sublínea:', deleteError);
-      throw deleteError;
+      throw new Error(`Error al eliminar la sublínea: ${deleteError.message}`);
     }
 
     console.log('✅ Sublínea eliminada exitosamente');

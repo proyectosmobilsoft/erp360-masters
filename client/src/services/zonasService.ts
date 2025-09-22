@@ -27,14 +27,18 @@ export interface UnidadServicioData {
   id?: number;
   codigo?: number;
   nombre_servicio: string;
-  id_municipio: number;
+  id_sucursal?: number;
   no_ppl?: number;
   activo?: boolean;
   created_at?: string;
   updated_at?: string;
-  gen_municipios?: {
+  gen_sucursales?: {
     id: number;
     nombre: string;
+    gen_municipios?: {
+      id: number;
+      nombre: string;
+    } | null;
   } | null;
 }
 
@@ -74,14 +78,18 @@ export const zonasService = {
         id,
         codigo,
         nombre_servicio,
-        id_municipio,
+        id_sucursal,
         no_ppl,
         activo,
         created_at,
         updated_at,
-        gen_municipios!id_municipio_FK (
+        gen_sucursales (
           id,
-          nombre
+          nombre,
+          gen_municipios (
+            id,
+            nombre
+          )
         )
       `)
       .eq('activo', true)
@@ -105,11 +113,15 @@ export const zonasService = {
           id,
           codigo,
           nombre_servicio,
-          id_municipio,
+          id_sucursal,
           no_ppl,
-          gen_municipios!id_municipio_FK (
+          gen_sucursales (
             id,
-            nombre
+            nombre,
+            gen_municipios (
+              id,
+              nombre
+            )
           )
         )
       `)
