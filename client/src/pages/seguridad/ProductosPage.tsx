@@ -32,9 +32,143 @@ import {
   Loader2, 
   Save, 
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from 'lucide-react';
-import { productosService, ProductoData, ProductoForm, MedidaData, CategoriaData, SublineaData } from '@/services/productosService';
+import { productosService, ProductoData, ProductoForm, CategoriaData } from '@/services/productosService';
+import { MedidaData, medidasService } from '@/services/medidasService';
+import { SublineaData as SublineaDataFull } from '@/services/sublineasService';
+import { lineasService, LineaData } from '@/services/lineasService';
+import { tiposService, TipoData } from '@/services/tiposService';
+import { interfazContableService, InterfazContableData } from '@/services/interfazContableService';
+import { presentacionMedidasService, PresentacionMedidaData } from '@/services/presentacionMedidasService';
+import { sublineasService } from '@/services/sublineasService';
+
+// Image Upload Component
+interface ImageUploadProps {
+  value?: string;
+  onChange: (value: string) => void;
+}
+
+const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const { toast } = useToast();
+
+  const handleFileSelect = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: '❌ Archivo no válido',
+        description: 'Por favor selecciona un archivo de imagen válido.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      toast({
+        title: '❌ Archivo muy grande',
+        description: 'El archivo debe ser menor a 5MB.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      if (result) {
+        onChange(result);
+        toast({
+          title: '✅ Imagen cargada',
+          description: 'La imagen se ha cargado exitosamente.',
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileSelect(files[0]);
+    }
+  };
+
+  const handleClick = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) {
+        handleFileSelect(file);
+      }
+    };
+    input.click();
+  };
+
+  return (
+    <div
+      className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
+        isDragOver 
+          ? 'border-cyan-500 bg-cyan-50' 
+          : value 
+            ? 'border-gray-300 bg-white' 
+            : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onClick={handleClick}
+    >
+      {value ? (
+        <div className="relative w-full h-full">
+          <img 
+            src={value} 
+            alt="Imagen del producto" 
+            className="w-full h-full object-cover rounded-lg"
+          />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 text-xs"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <div className="text-center">
+          <div className="text-gray-400 text-2xl mb-1">📷</div>
+          <p className="text-gray-500 text-xs">
+            Haz clic o arrastra
+          </p>
+          <p className="text-gray-400 text-xs">
+            PNG, JPG hasta 5MB
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 // Form Component
 interface ProductoFormComponentProps {
@@ -42,7 +176,11 @@ interface ProductoFormComponentProps {
   editingProducto?: ProductoData | null;
   medidas: MedidaData[];
   categorias: CategoriaData[];
-  sublineas: SublineaData[];
+  sublineas: SublineaDataFull[];
+  lineas: LineaData[];
+  tipos: TipoData[];
+  interfacesContables: InterfazContableData[];
+  presentacionesMedidas: PresentacionMedidaData[];
   onSubmit: (data: ProductoForm) => void;
   isLoading: boolean;
   onCancel: () => void;
@@ -54,6 +192,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   medidas,
   categorias,
   sublineas,
+  lineas,
+  tipos,
+  interfacesContables,
+  presentacionesMedidas,
   onSubmit, 
   isLoading, 
   onCancel
@@ -62,8 +204,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     codigo: producto?.codigo || "",
     nombre: producto?.nombre || "",
     id_medida: producto?.id_medida || 0,
-    id_tipo_producto: producto?.id_tipo_producto || 1,
+    id_tipo_producto: producto?.id_tipo_producto || 0,
     id_categoria: producto?.id_categoria || 0,
+    id_linea: 0, // Campo temporal para manejar la línea seleccionada
     id_sublineas: producto?.id_sublineas || 0,
     id_interfaz_contable: producto?.id_interfaz_contable || undefined,
     id_marca: producto?.id_marca || undefined,
@@ -75,11 +218,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     id_tipo_zona: producto?.id_tipo_zona || undefined,
     ultimo_costo: producto?.ultimo_costo || 0,
     id_proveedor: producto?.id_proveedor || undefined,
-    frecuencia: producto?.frecuencia || 1,
+    frecuencia: producto?.frecuencia || 0,
     controla_existencia: producto?.controla_existencia || 0,
     controla_lotes: producto?.controla_lotes || 0,
     imgruta: producto?.imgruta || "",
   });
+
+  // Estados para manejar las dependencias
+  const [lineasFiltradas, setLineasFiltradas] = useState<LineaData[]>([]);
+  const [sublineasFiltradas, setSublineasFiltradas] = useState<SublineaDataFull[]>([]);
 
   const [nextCodigo, setNextCodigo] = useState<string>("");
 
@@ -106,32 +253,85 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       codigo: producto?.codigo || "",
       nombre: producto?.nombre || "",
       id_medida: producto?.id_medida || 0,
-      id_tipo_producto: producto?.id_tipo_producto || 1,
+      id_tipo_producto: producto?.id_tipo_producto || 0,
       id_categoria: producto?.id_categoria || 0,
+      id_linea: 0, // Campo temporal para manejar la línea seleccionada
       id_sublineas: producto?.id_sublineas || 0,
       id_interfaz_contable: producto?.id_interfaz_contable || undefined,
       id_marca: producto?.id_marca || undefined,
       id_color: producto?.id_color || undefined,
       referencia: producto?.referencia || "",
       id_clase_servicio: producto?.id_clase_servicio || undefined,
-      tipo_menu: producto?.tipo_menu || 0,
-      no_ciclo: producto?.no_ciclo || 0,
       id_tipo_zona: producto?.id_tipo_zona || undefined,
       ultimo_costo: producto?.ultimo_costo || 0,
       id_proveedor: producto?.id_proveedor || undefined,
-      frecuencia: producto?.frecuencia || 1,
+      frecuencia: producto?.frecuencia || 0,
       controla_existencia: producto?.controla_existencia || 0,
       controla_lotes: producto?.controla_lotes || 0,
       imgruta: producto?.imgruta || "",
     });
-    
-    // Sincronizar el display del último costo
-    if (producto?.ultimo_costo) {
-      setUltimoCostoDisplay(producto.ultimo_costo.toString());
-    } else {
-      setUltimoCostoDisplay('');
-    }
   }, [producto]);
+
+  // Manejar edición de producto específicamente
+  React.useEffect(() => {
+    if (editingProducto) {
+      setFormData({
+        id: editingProducto.id || 0,
+        codigo: editingProducto.codigo || "",
+        nombre: editingProducto.nombre || "",
+        id_medida: editingProducto.id_medida || 0,
+        id_tipo_producto: editingProducto.id_tipo_producto || 0,
+        id_categoria: editingProducto.id_categoria || 0,
+        id_linea: (editingProducto as any).id_linea || 0,
+        id_sublineas: editingProducto.id_sublineas || 0,
+        id_interfaz_contable: editingProducto.id_interfaz_contable || undefined,
+        id_marca: editingProducto.id_marca || undefined,
+        id_color: editingProducto.id_color || undefined,
+        id_clase_servicio: editingProducto.id_clase_servicio || undefined,
+        id_tipo_zona: editingProducto.id_tipo_zona || undefined,
+        id_proveedor: editingProducto.id_proveedor || undefined,
+        referencia: editingProducto.referencia || "",
+        ultimo_costo: editingProducto.ultimo_costo || 0,
+        frecuencia: editingProducto.frecuencia || 0,
+        controla_existencia: editingProducto.controla_existencia || 0,
+        controla_lotes: editingProducto.controla_lotes || 0,
+        imgruta: editingProducto.imgruta || "",
+      });
+    }
+  }, [editingProducto]);
+
+  // Filtrar líneas cuando cambie la categoría
+  React.useEffect(() => {
+    if (formData.id_categoria && formData.id_categoria > 0) {
+      const lineasDeCategoria = lineas.filter(linea => linea.id_categoria === formData.id_categoria);
+      setLineasFiltradas(lineasDeCategoria);
+      // Resetear línea y sublínea cuando cambie la categoría
+      setFormData(prev => ({
+        ...prev,
+        id_linea: 0,
+        id_sublineas: 0
+      }));
+    } else {
+      setLineasFiltradas([]);
+    }
+  }, [formData.id_categoria, lineas]);
+
+  // Filtrar sublíneas cuando cambie la línea
+  React.useEffect(() => {
+    console.log("🔄 Filtrando sublíneas para línea:", formData.id_linea, "Total sublíneas:", sublineas.length);
+    if (formData.id_linea && formData.id_linea > 0) {
+      const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
+      console.log("📋 Sublíneas encontradas:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre, id_linea: s.id_linea })));
+      setSublineasFiltradas(sublineasDeLinea);
+      // Resetear sublínea cuando cambie la línea
+      setFormData(prev => ({
+        ...prev,
+        id_sublineas: 0
+      }));
+    } else {
+      setSublineasFiltradas([]);
+    }
+  }, [formData.id_linea, sublineas]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -144,20 +344,151 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       return;
     }
     
-    setFormData(prev => ({
+    setFormData(prev => {
+      const newData = {
       ...prev,
       [field]: value
-    }));
+      };
+
+      // Si cambia la categoría, resetear línea y sublínea
+      if (field === 'id_categoria') {
+        newData.id_linea = undefined;
+        newData.id_sublineas = 0;
+      }
+
+      // Si cambia la línea, resetear sublínea
+      if (field === 'id_linea') {
+        newData.id_sublineas = 0;
+      }
+
+      return newData;
+    });
   };
 
-  const [ultimoCostoDisplay, setUltimoCostoDisplay] = useState<string>('');
+  // Funciones para manejar empaques
+  const handleEmpaqueTipoChange = (tipo: string) => {
+    setEmpaqueForm(prev => {
+      const newForm = {
+        ...prev,
+        tipo
+      };
+      return newForm;
+    });
+    
+    // Generar descripción automáticamente si hay factor
+    if (empaqueForm.factor) {
+      generateDescripcion(tipo, empaqueForm.factor);
+    }
+  };
+
+  const handleEmpaqueFactorChange = (factor: string) => {
+    setEmpaqueForm(prev => {
+      const newForm = {
+        ...prev,
+        factor
+      };
+      return newForm;
+    });
+    
+    // Generar descripción automáticamente si hay tipo
+    if (empaqueForm.tipo) {
+      generateDescripcion(empaqueForm.tipo, factor);
+    }
+  };
+
+  const generateDescripcion = (tipo: string, factor: string) => {
+    console.log("🔧 generateDescripcion llamado:", { tipo, factor, id_medida: formData.id_medida });
+    console.log("🔧 Medidas disponibles:", medidas);
+    
+    if (tipo && factor && formData.id_medida && formData.id_medida > 0) {
+      const medida = medidas.find(m => m.id === formData.id_medida);
+      console.log("🔧 Medida encontrada:", medida);
+      
+      if (medida && medida.abreviatura) {
+        const descripcion = `${tipo} X ${factor}${medida.abreviatura}`;
+        console.log("🔧 Descripción generada:", descripcion);
+        setEmpaqueForm(prev => {
+          console.log("🔧 Estado anterior:", prev);
+          console.log("🔧 Actualizando empaqueForm con descripción:", descripcion);
+          const nuevoEstado = {
+            ...prev,
+            descripcion
+          };
+          console.log("🔧 Nuevo estado que se va a establecer:", nuevoEstado);
+          return nuevoEstado;
+        });
+      } else {
+        console.log("❌ No se encontró abreviatura:", medida);
+      }
+    } else {
+      console.log("❌ Faltan datos:", { tipo, factor, id_medida: formData.id_medida });
+    }
+  };
+
+  const handleAgregarEmpaque = () => {
+    if (empaqueForm.tipo && empaqueForm.factor && empaqueForm.descripcion) {
+      const nuevoEmpaque = {
+        id: Date.now().toString(),
+        tipo: empaqueForm.tipo,
+        factor: empaqueForm.factor,
+        descripcion: empaqueForm.descripcion
+      };
+      setEmpaques(prev => [...prev, nuevoEmpaque]);
+      setEmpaqueForm({ tipo: '', factor: '', descripcion: '' });
+    }
+  };
+
+  const handleEliminarEmpaque = (id: string) => {
+    setEmpaques(prev => prev.filter(empaque => empaque.id !== id));
+  };
+
+  const [ultimoCostoDisplay, setUltimoCostoDisplay] = useState<string>('0.00');
+  const [costoPromedioDisplay, setCostoPromedioDisplay] = useState<string>('0.00');
+  const [precioMayoristaDisplay, setPrecioMayoristaDisplay] = useState<string>('0.00');
+  const [precioMinoristaDisplay, setPrecioMinoristaDisplay] = useState<string>('0.00');
+  const [precioPublicoDisplay, setPrecioPublicoDisplay] = useState<string>('0.00');
+
+  // Estados para empaques asociados
+  const [empaques, setEmpaques] = useState<Array<{
+    id: string;
+    tipo: string;
+    factor: string;
+    descripcion: string;
+  }>>([]);
+  const [empaqueForm, setEmpaqueForm] = useState({
+    tipo: '',
+    factor: '',
+    descripcion: ''
+  });
+
+  // Log para debuggear empaqueForm
+  React.useEffect(() => {
+    console.log("📝 empaqueForm actualizado:", empaqueForm);
+  }, [empaqueForm]);
+
+  // Filtrar presentaciones por unidad seleccionada
+  const presentacionesFiltradas = useMemo(() => {
+    if (!formData.id_medida || formData.id_medida === 0) {
+      return [];
+    }
+    return presentacionesMedidas.filter(presentacion => 
+      presentacion.id_medida === formData.id_medida
+    );
+  }, [presentacionesMedidas, formData.id_medida]);
+
+  // Limpiar formulario de empaques cuando cambie la unidad
+  React.useEffect(() => {
+    console.log("🧹 Limpiando empaqueForm porque cambió id_medida:", formData.id_medida);
+    setEmpaqueForm({ tipo: '', factor: '', descripcion: '' });
+    setEmpaques([]);
+  }, [formData.id_medida]);
 
   const handleUltimoCostoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
     
-    // Si el campo está vacío, limpiar todo
+    // Si el campo está vacío, mostrar 0.00
     if (inputValue === '') {
-      setUltimoCostoDisplay('');
+      setUltimoCostoDisplay('0.00');
       setFormData(prev => ({
         ...prev,
         ultimo_costo: 0
@@ -179,8 +510,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
     
-    // Actualizar el display
-    setUltimoCostoDisplay(cleanValue);
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setUltimoCostoDisplay(formatted);
     
     // Convertir a número y actualizar el estado
     const numericValue = parseFloat(cleanValue) || 0;
@@ -190,18 +522,173 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     }));
   };
 
-  const formatUltimoCostoDisplay = (value: string) => {
-    if (!value) return '';
+  const handleCostoPromedioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    if (inputValue === '') {
+      setCostoPromedioDisplay('0.00');
+      return;
+    }
+    let cleanValue = inputValue.replace(/[^0-9.]/g, '');
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+      cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+    }
     
-    // Si tiene punto decimal, formatear la parte entera
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setCostoPromedioDisplay(formatted);
+  };
+
+  const handlePrecioMayoristaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    if (inputValue === '') {
+      setPrecioMayoristaDisplay('0.00');
+      return;
+    }
+    let cleanValue = inputValue.replace(/[^0-9.]/g, '');
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+      cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setPrecioMayoristaDisplay(formatted);
+  };
+
+  const handlePrecioMinoristaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    if (inputValue === '') {
+      setPrecioMinoristaDisplay('0.00');
+      return;
+    }
+    let cleanValue = inputValue.replace(/[^0-9.]/g, '');
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+      cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setPrecioMinoristaDisplay(formatted);
+  };
+
+  const handlePrecioPublicoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    if (inputValue === '') {
+      setPrecioPublicoDisplay('0.00');
+      return;
+    }
+    let cleanValue = inputValue.replace(/[^0-9.]/g, '');
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    if (parts.length === 2 && parts[1].length > 2) {
+      cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
+    }
+    
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setPrecioPublicoDisplay(formatted);
+  };
+
+  const formatCurrencyDisplay = (value: string) => {
+    if (!value) return '0.00';
+    
+    // Solo formatear separadores de miles, sin decimales automáticos
     if (value.includes('.')) {
       const [integerPart, decimalPart] = value.split('.');
       const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
       return `${formattedInteger}.${decimalPart}`;
     } else {
       // Solo parte entera, formatear con separadores de miles
-      return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      const formattedInteger = value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return formattedInteger;
     }
+  };
+
+  const formatOnBlur = (value: string) => {
+    if (!value || value === '') return '0.00';
+    
+    // Remover comas para procesar el valor
+    const cleanValue = value.replace(/,/g, '');
+    
+    // Si tiene punto decimal, formatear la parte entera y asegurar 2 decimales
+    if (cleanValue.includes('.')) {
+      const [integerPart, decimalPart] = cleanValue.split('.');
+      const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      
+      // Asegurar que siempre tenga 2 decimales
+      let paddedDecimal = decimalPart;
+      if (decimalPart.length === 1) {
+        paddedDecimal = decimalPart + '0';
+      } else if (decimalPart.length === 0) {
+        paddedDecimal = '00';
+      } else if (decimalPart.length > 2) {
+        paddedDecimal = decimalPart.substring(0, 2);
+      }
+      
+      return `${formattedInteger}.${paddedDecimal}`;
+    } else {
+      // Solo parte entera, formatear con separadores de miles y agregar .00
+      const formattedInteger = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return `${formattedInteger}.00`;
+    }
+  };
+
+  const handleUltimoCostoBlur = () => {
+    const formatted = formatOnBlur(ultimoCostoDisplay);
+    setUltimoCostoDisplay(formatted);
+  };
+
+  const handleCostoPromedioBlur = () => {
+    const formatted = formatOnBlur(costoPromedioDisplay);
+    setCostoPromedioDisplay(formatted);
+  };
+
+  const handlePrecioMayoristaBlur = () => {
+    const formatted = formatOnBlur(precioMayoristaDisplay);
+    setPrecioMayoristaDisplay(formatted);
+  };
+
+  const handlePrecioMinoristaBlur = () => {
+    const formatted = formatOnBlur(precioMinoristaDisplay);
+    setPrecioMinoristaDisplay(formatted);
+  };
+
+  const handlePrecioPublicoBlur = () => {
+    const formatted = formatOnBlur(precioPublicoDisplay);
+    setPrecioPublicoDisplay(formatted);
+  };
+
+  const handleUltimoCostoFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handleCostoPromedioFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handlePrecioMayoristaFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handlePrecioMinoristaFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handlePrecioPublicoFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
   };
 
   return (
@@ -214,190 +701,789 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         </h2>
       </div>
 
-      <div className="p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Primera fila */}
+      <div className="p-3">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Layout principal: dos columnas más compacto */}
           <div className="grid grid-cols-12 gap-4">
-            {/* Código */}
-            <div className="col-span-2 space-y-2">
-              <Label htmlFor="codigo" className="text-sm font-medium">Código</Label>
-              <Input
-                id="codigo"
-                value={editingProducto ? formData.codigo : (nextCodigo || "Cargando...")}
-                onChange={(e) => handleInputChange('codigo', e.target.value)}
-                readOnly={true}
-                className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
-                autoComplete="off"
-              />
-            </div>
-
+            {/* Columna izquierda - Detalles del producto */}
+            <div className="col-span-8 space-y-4">
             {/* Nombre */}
-            <div className="col-span-6 space-y-2">
+              <div className="space-y-1">
+                <div className="flex items-center">
               <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
+                </div>
               <Input
                 id="nombre"
                 value={formData.nombre}
                 onChange={(e) => handleInputChange('nombre', e.target.value)}
                 required
-                className="h-8 text-sm"
+                  className="h-8 text-sm bg-yellow-25"
                 autoComplete="off"
               />
             </div>
 
-            {/* Referencia */}
-            <div className="col-span-4 space-y-2">
-              <Label htmlFor="referencia" className="text-sm font-medium">Referencia</Label>
-              <Input
-                id="referencia"
-                value={formData.referencia || ""}
-                onChange={(e) => handleInputChange('referencia', e.target.value)}
-                className="h-8 text-sm"
-                autoComplete="off"
-              />
-            </div>
+              {/* Características - más compacto */}
+              <div className="space-y-2">
+                <div className="flex items-center">
+                  <h3 className="text-sm font-normal text-gray-400">Características</h3>
+                  <div className="flex-1 h-px bg-gray-300 ml-3"></div>
           </div>
 
-          {/* Segunda fila */}
-          <div className="grid grid-cols-12 gap-4">
-            {/* Medida */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="id_medida" className="text-sm font-medium">Medida *</Label>
+                {/* Primera fila de características */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_categoria" className="text-sm font-medium">Categoria</Label>
+                    </div>
               <Select
-                value={formData.id_medida.toString()}
-                onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
+                      value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
               >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
-                  {medidas.map((medida) => (
-                    <SelectItem key={medida.id} value={medida.id.toString()}>
-                      {medida.nombre}
+                        {categorias.map((categoria) => (
+                          <SelectItem key={categoria.id} value={categoria.id.toString()}>
+                            {categoria.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Categoría */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="id_categoria" className="text-sm font-medium">Categoría *</Label>
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_tipo_producto" className="text-sm font-medium">Tipo Producto</Label>
+                    </div>
               <Select
-                value={formData.id_categoria.toString()}
-                onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
+                      value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
               >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categorias.map((categoria) => (
-                    <SelectItem key={categoria.id} value={categoria.id.toString()}>
-                      {categoria.nombre}
+                        {tipos.map((tipo) => (
+                          <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"}>
+                            {tipo.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+                  </div>
             </div>
 
-            {/* Sublínea */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea *</Label>
+                {/* Segunda fila de características */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_linea" className="text-sm font-medium">Línea</Label>
+                    </div>
+                    <Select
+                      value={formData.id_linea?.toString() || "0"}
+                      onValueChange={(value) => handleInputChange('id_linea', parseInt(value))}
+                      disabled={lineasFiltradas.length === 0}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder={
+                          lineasFiltradas.length === 0 
+                            ? "Seleccione una categoría primero" 
+                            : "Seleccionar línea"
+                        } className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lineasFiltradas.length === 0 ? (
+                          <SelectItem value="0" disabled>
+                            No hay líneas disponibles
+                          </SelectItem>
+                        ) : (
+                          lineasFiltradas.map((linea) => (
+                            <SelectItem key={linea.id} value={linea.id?.toString() || "0"}>
+                              {linea.nombre}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea</Label>
+                    </div>
               <Select
                 value={formData.id_sublineas.toString()}
                 onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
+                      disabled={sublineasFiltradas.length === 0}
               >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder={
+                          sublineasFiltradas.length === 0 
+                            ? "Seleccione una línea primero" 
+                            : "Seleccionar sublínea"
+                        } className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sublineas.map((sublinea) => (
+                        {sublineasFiltradas.length === 0 ? (
+                          <SelectItem value="0" disabled>
+                            No hay sublíneas disponibles
+                          </SelectItem>
+                        ) : (
+                          sublineasFiltradas.map((sublinea) => (
                     <SelectItem key={sublinea.id} value={sublinea.id.toString()}>
                       {sublinea.nombre}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Tercera fila de características */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_medida" className="text-sm font-medium">Unidad</Label>
+                    </div>
+                    <Select
+                      value={formData.id_medida && formData.id_medida > 0 ? formData.id_medida.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar unidad" className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {medidas.map((medida) => (
+                          <SelectItem key={medida.id} value={medida.id.toString()}>
+                            {medida.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Último Costo */}
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="referencia" className="text-sm font-medium">Referencia</Label>
+                    </div>
+                    <Input
+                      id="referencia"
+                      value={formData.referencia || ""}
+                      onChange={(e) => handleInputChange('referencia', e.target.value)}
+                      className="h-8 text-sm bg-yellow-25"
+                      autoComplete="off"
+                    />
+                  </div>
+            </div>
+          </div>
+
+            </div>
+
+            {/* Columna derecha - Código e Imagen */}
+            <div className="col-span-4 space-y-3">
+              {/* Código */}
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <Label htmlFor="codigo" className="text-sm font-medium">Código</Label>
+                </div>
+              <Input
+                  id="codigo"
+                  value={editingProducto ? formData.codigo : (nextCodigo || "Cargando...")}
+                  readOnly={true}
+                  className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
+                autoComplete="off"
+              />
+            </div>
+
+              {/* IMAGEN - más compacto */}
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <Label className="text-sm font-medium">IMAGEN</Label>
+                </div>
+                <div className="h-32">
+                  <ImageUpload
+                    value={formData.imgruta}
+                    onChange={(value) => handleInputChange('imgruta', value)}
+                  />
+                </div>
+            </div>
+
+              {/* Checkboxes - debajo de la imagen */}
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="controla_existencia"
+                    type="checkbox"
+                    checked={formData.controla_existencia === 1}
+                    onChange={(e) => handleInputChange('controla_existencia', e.target.checked ? 1 : 0)}
+                    className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                  />
+                  <div className="flex items-center">
+                    <Label htmlFor="controla_existencia" className="text-sm font-medium">
+                      Controla Existencia
+                    </Label>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="controla_lotes"
+                    type="checkbox"
+                    checked={formData.controla_lotes === 1}
+                    onChange={(e) => handleInputChange('controla_lotes', e.target.checked ? 1 : 0)}
+                    className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                  />
+                  <div className="flex items-center">
+                    <Label htmlFor="controla_lotes" className="text-sm font-medium">
+                      Controla Lotes
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs de navegación en la parte inferior - más compacto */}
+          <div className="border-t pt-3">
+            <Tabs defaultValue="precio" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 bg-cyan-100/60 p-1 rounded-lg">
+                <TabsTrigger 
+                  value="precio" 
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
+                  Precio y Existencias
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="contable" 
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
+                  Interfaz Contable
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="historia" 
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
+                  Historia del Producto
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="empaques" 
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
+                  Empaques Asociados
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="precio" className="mt-3">
+                <div className="grid grid-cols-12 gap-4">
+                  {/* Columna izquierda - Costos e Inventario */}
             <div className="col-span-3 space-y-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
               <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
               <Input
                 id="ultimo_costo"
-                type="text"
-                value={formatUltimoCostoDisplay(ultimoCostoDisplay)}
-                onChange={handleUltimoCostoChange}
-                placeholder="0.00"
-                className="h-8 text-sm"
+                          type="text"
+                          value={formatCurrencyDisplay(ultimoCostoDisplay)}
+                          onChange={handleUltimoCostoChange}
+                          onFocus={handleUltimoCostoFocus}
+                          onBlur={handleUltimoCostoBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
                 autoComplete="off"
               />
             </div>
           </div>
 
-          {/* Tercera fila */}
-          <div className="grid grid-cols-12 gap-4">
-            {/* Frecuencia */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="frecuencia" className="text-sm font-medium">Frecuencia</Label>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
               <Input
-                id="frecuencia"
+                          id="costo_promedio"
+                          type="text"
+                          value={formatCurrencyDisplay(costoPromedioDisplay)}
+                          onChange={handleCostoPromedioChange}
+                          onFocus={handleCostoPromedioFocus}
+                          onBlur={handleCostoPromedioBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia Actual</Label>
+                      </div>
+                      <Input
+                        id="existencia_actual"
                 type="number"
-                value={formData.frecuencia || ""}
-                onChange={(e) => handleInputChange('frecuencia', parseInt(e.target.value) || 1)}
-                className="h-8 text-sm"
+                        className="h-8 text-sm bg-yellow-25"
                 autoComplete="off"
               />
             </div>
 
-            {/* Controla Existencia */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="controla_existencia" className="text-sm font-medium">Controla Existencia</Label>
-              <Select
-                value={formData.controla_existencia?.toString() || "0"}
-                onValueChange={(value) => handleInputChange('controla_existencia', parseInt(value))}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia de Compra</Label>
+                      </div>
+                      <div className="flex gap-2">
+                        <Select>
+                          <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                            <SelectValue placeholder="Semanal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">No</SelectItem>
-                  <SelectItem value="1">Sí</SelectItem>
+                            <SelectItem value="diaria">Diaria</SelectItem>
+                            <SelectItem value="semanal">Semanal</SelectItem>
+                            <SelectItem value="mensual">Mensual</SelectItem>
+                            <SelectItem value="trimestral">Trimestral</SelectItem>
+                </SelectContent>
+              </Select>
+                        <Button type="button" variant="outline" size="sm" className="h-8 px-3">
+                          Días
+                        </Button>
+                      </div>
+                    </div>
+            </div>
+
+                  {/* Columna central - Precios */}
+            <div className="col-span-3 space-y-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="precio_mayorista" className="text-sm font-medium">Precio Mayorista</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="precio_mayorista"
+                          type="text"
+                          value={formatCurrencyDisplay(precioMayoristaDisplay)}
+                          onChange={handlePrecioMayoristaChange}
+                          onFocus={handlePrecioMayoristaFocus}
+                          onBlur={handlePrecioMayoristaBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="precio_minorista" className="text-sm font-medium">Precio Minorista</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="precio_minorista"
+                          type="text"
+                          value={formatCurrencyDisplay(precioMinoristaDisplay)}
+                          onChange={handlePrecioMinoristaChange}
+                          onFocus={handlePrecioMinoristaFocus}
+                          onBlur={handlePrecioMinoristaBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="precio_publico"
+                          type="text"
+                          value={formatCurrencyDisplay(precioPublicoDisplay)}
+                          onChange={handlePrecioPublicoChange}
+                          onFocus={handlePrecioPublicoFocus}
+                          onBlur={handlePrecioPublicoBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna derecha - Grilla de Almacenes */}
+                  <div className="col-span-6 space-y-2">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium underline">Almacenes</Label>
+                      <div className="h-48 border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                        <span className="text-gray-500 font-medium">GRILLA PRECIOS</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="contable" className="mt-3">
+                <div className="space-y-4">
+                  {/* Interfaz Contable */}
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-5 gap-4">
+                      <div className="col-span-3 space-y-1">
+                        <div className="flex items-center">
+                          <Label className="text-sm font-medium">Interfaz Contable</Label>
+                        </div>
+                        <Select>
+                          <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                            <SelectValue placeholder="Seleccionar interfaz contable" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {interfacesContables.map((interfaz) => (
+                              <SelectItem key={interfaz.id} value={interfaz.id.toString()}>
+                                {interfaz.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="iva" className="text-sm font-medium">% IVA</Label>
+                        </div>
+                        <Input
+                          id="iva"
+                          type="number"
+                          value="0"
+                          readOnly
+                          className="h-8 text-sm bg-yellow-25 text-gray-400"
+                          autoComplete="off"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="retencion" className="text-sm font-medium">% Retención</Label>
+                        </div>
+                        <Input
+                          id="retencion"
+                          type="number"
+                          value="1.5"
+                          readOnly
+                          className="h-8 text-sm bg-yellow-25 text-gray-400"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cuentas / Contabilidad */}
+                  <div className="space-y-3">
+                    <div className="flex items-center">
+                      <h4 className="text-sm font-normal text-gray-400">Cuentas / Contabilidad</h4>
+                      <div className="flex-1 h-px bg-gray-300 ml-3"></div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta de Inv. o Compras</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="14050101"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="INVENTARIO ALIMENTOS"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta de IVA en Compras</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="14050202"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="IVA"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta Retención en Compras</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="23654003"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="RET. PRODUCTOS AGROPECUARIOS 1.5%"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta Costo Ventas o Producción</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="61351401"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="VTA DE INSUMO, MATE PRIMA AGROPE Y FLORE"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta de Ventas o Ingreso</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="41351401"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="VTA DE INSUMO, MATER PRIMA AGROPE Y FLOR"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta de IVA en Ventas</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value="24080501"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value="IVA GENERADO"
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <div className="flex items-center">
+                            <Label className="text-sm font-medium">Cuenta Retención en Ventas</Label>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value=""
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
+                              autoComplete="off"
+                            />
+                            <Input
+                              type="text"
+                              value=""
+                              readOnly
+                              className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
+                              autoComplete="off"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="historia" className="mt-3">
+                <div className="space-y-4">
+                  <div className="text-center py-8">
+                    <p className="text-gray-500">Historia del Producto</p>
+                    <p className="text-sm text-gray-400 mt-2">Contenido de historial del producto</p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="empaques" className="mt-3">
+                <div className="space-y-4">
+                  {/* Formulario para agregar empaques */}
+                  <div className="grid grid-cols-12 gap-3 items-end">
+                    <div className="col-span-4 space-y-1">
+                      <div className="flex items-center">
+                        <Label className="text-sm font-medium">Tipo Presentación</Label>
+                      </div>
+              <Select
+                        value={empaqueForm.tipo}
+                        onValueChange={handleEmpaqueTipoChange}
+                        disabled={!formData.id_medida || formData.id_medida === 0}
+                      >
+                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                          <SelectValue placeholder={
+                            !formData.id_medida || formData.id_medida === 0 
+                              ? "Seleccione una unidad primero" 
+                              : "Seleccionar presentación"
+                          } />
+                </SelectTrigger>
+                <SelectContent>
+                          {presentacionesFiltradas.length === 0 ? (
+                            <SelectItem value="0" disabled>
+                              {!formData.id_medida || formData.id_medida === 0 
+                                ? "Seleccione una unidad primero" 
+                                : "No hay presentaciones disponibles"
+                              }
+                            </SelectItem>
+                          ) : (
+                            presentacionesFiltradas.map((presentacion: PresentacionMedidaData) => (
+                              <SelectItem key={presentacion.id} value={presentacion.nombre}>
+                                {presentacion.nombre}
+                              </SelectItem>
+                            ))
+                          )}
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Controla Lotes */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="controla_lotes" className="text-sm font-medium">Controla Lotes</Label>
-              <Select
-                value={formData.controla_lotes?.toString() || "0"}
-                onValueChange={(value) => handleInputChange('controla_lotes', parseInt(value))}
-              >
-                <SelectTrigger className="h-8 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">No</SelectItem>
-                  <SelectItem value="1">Sí</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Imagen Ruta */}
-            <div className="col-span-3 space-y-2">
-              <Label htmlFor="imgruta" className="text-sm font-medium">Imagen Ruta</Label>
+                    <div className="col-span-2 space-y-1">
+                      <div className="flex items-center">
+                        <Label className="text-sm font-medium">Factor</Label>
+                      </div>
               <Input
-                id="imgruta"
-                value={formData.imgruta || ""}
-                onChange={(e) => handleInputChange('imgruta', e.target.value)}
-                className="h-8 text-sm"
+                        type="text"
+                        value={empaqueForm.factor}
+                        onChange={(e) => handleEmpaqueFactorChange(e.target.value)}
+                        className="h-8 text-sm bg-yellow-25"
                 autoComplete="off"
+                        placeholder="Ej: 10"
               />
             </div>
+                    <div className="col-span-5 space-y-1">
+                      <div className="flex items-center">
+                        <Label className="text-sm font-medium">Descripción</Label>
+                      </div>
+                      <Input
+                        type="text"
+                        value={empaqueForm.descripcion}
+                        className="h-8 text-sm bg-yellow-25 text-gray-500"
+                        autoComplete="off"
+                        readOnly
+                        placeholder="Se genera automáticamente"
+                        onChange={() => {}} // Forzar re-render
+                      />
+                    </div>
+                    <div className="col-span-1">
+                      <Button 
+                        type="button" 
+                        onClick={handleAgregarEmpaque}
+                        className="h-8 w-8 p-0 bg-cyan-600 hover:bg-cyan-700"
+                        disabled={!empaqueForm.tipo || !empaqueForm.factor || !empaqueForm.descripcion}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Tabla de empaques */}
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <Label className="text-sm font-medium">Empaques Asociados</Label>
+                    </div>
+                    <div className="border border-gray-300 rounded-lg overflow-hidden">
+                      <div className="bg-cyan-100 px-4 py-2 text-sm font-medium text-gray-700">
+                        <div className="grid grid-cols-4 gap-4">
+                          <div>Tipo Presentación</div>
+                          <div>Factor</div>
+                          <div>Descripción</div>
+                          <div></div>
+                        </div>
+                      </div>
+                      <div className="bg-white">
+                        {empaques.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                            No hay empaques asociados. Agregue uno usando el formulario superior.
+                          </div>
+                        ) : (
+                          empaques.map((empaque) => (
+                            <div key={empaque.id} className="px-4 py-2 border-b border-gray-200 last:border-b-0">
+                              <div className="grid grid-cols-4 gap-4 items-center">
+                                <div className="text-sm">{empaque.tipo}</div>
+                                <div className="text-sm">{empaque.factor}</div>
+                                <div className="text-sm">{empaque.descripcion}</div>
+                                <div className="flex justify-end">
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                                    onClick={() => handleEliminarEmpaque(empaque.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
           {/* Botones */}
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-3">
             <Button
               type="button"
               variant="outline"
@@ -450,8 +1536,9 @@ const ProductosPage: React.FC = () => {
 
   const { data: medidas = [] } = useQuery({
     queryKey: ["medidas"],
-    queryFn: productosService.listMedidas,
+    queryFn: medidasService.listMedidas,
   });
+
 
   const { data: categorias = [] } = useQuery({
     queryKey: ["categorias"],
@@ -460,7 +1547,27 @@ const ProductosPage: React.FC = () => {
 
   const { data: sublineas = [] } = useQuery({
     queryKey: ["sublineas"],
-    queryFn: productosService.listSublineas,
+    queryFn: sublineasService.listSublineas,
+  });
+
+  const { data: lineas = [] } = useQuery({
+    queryKey: ["lineas"],
+    queryFn: lineasService.listLineas,
+  });
+
+  const { data: tipos = [] } = useQuery({
+    queryKey: ["tipos"],
+    queryFn: tiposService.listTipos,
+  });
+
+  const { data: interfacesContables = [] } = useQuery({
+    queryKey: ["interfacesContables"],
+    queryFn: interfazContableService.listInterfacesContables,
+  });
+
+  const { data: presentacionesMedidas = [] } = useQuery({
+    queryKey: ["presentacionesMedidas"],
+    queryFn: presentacionMedidasService.listPresentacionesMedidas,
   });
 
   // Log cuando los datos cambien
@@ -893,7 +2000,11 @@ const ProductosPage: React.FC = () => {
             editingProducto={editingProducto}
             medidas={medidas}
             categorias={categorias}
-            sublineas={sublineas}
+            sublineas={sublineas as SublineaDataFull[]}
+            lineas={lineas}
+            tipos={tipos}
+            interfacesContables={interfacesContables}
+            presentacionesMedidas={presentacionesMedidas}
             onSubmit={(data) => {
               if (editingProducto) {
                 updateProductoMutation.mutate({ id: editingProducto.id!, data });

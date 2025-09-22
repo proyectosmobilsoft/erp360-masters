@@ -27,6 +27,7 @@ import CategoriasPage from './pages/seguridad/CategoriasPage';
 import SublineasPage from './pages/seguridad/SublineasPage';
 import MedidasPage from './pages/seguridad/MedidasPage';
 import TiposPage from './pages/seguridad/TiposPage';
+import PresentacionMedidasPage from './pages/seguridad/PresentacionMedidasPage';
 import ProductosPage from './pages/seguridad/ProductosPage';
 
 import GestionPermisosPage from './pages/seguridad/GestionPermisosPage';
@@ -82,6 +83,7 @@ function App() {
             <Route path="/sublineas" element={<SublineasPage />} />
             <Route path="/medidas" element={<MedidasPage />} />
             <Route path="/tipos" element={<TiposPage />} />
+            <Route path="/presentacion-medidas" element={<PresentacionMedidasPage />} />
             <Route path="/productos" element={<ProductosPage />} />
             
             {/* Rutas de seguridad */}

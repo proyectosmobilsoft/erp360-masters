@@ -46,6 +46,7 @@ export interface ProductoForm {
   id_medida: number;
   id_tipo_producto: number;
   id_categoria: number;
+  id_linea?: number;
   id_sublineas: number;
   id_interfaz_contable?: number;
   id_marca?: number;

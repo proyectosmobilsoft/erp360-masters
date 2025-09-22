@@ -390,10 +390,10 @@ const LineasPage: React.FC = () => {
   const lineasFiltradas = useMemo(() => {
     console.log("🔍 Filtrando líneas. Total:", lineas.length, "Filtros:", { searchTerm, statusFilter });
     const filtered = (lineas as LineaData[]).filter((linea: LineaData) => {
-      const matchesSearch =
-        linea.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        linea.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        linea.inv_categorias?.nombre.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        (linea.codigo?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (linea.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (linea.inv_categorias?.nombre?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
       const matchesStatus = statusFilter === "all" ||
         (statusFilter === "active" && linea.estado === 1) ||

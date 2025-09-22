@@ -41,15 +41,8 @@ export const listMedidas = async (): Promise<MedidaData[]> => {
 
     console.log('🔍 Datos raw de medidas desde Supabase:', data);
     
-    // Asegurar que el campo estado esté presente y sea un número
-    const medidasConEstado = data?.map(medida => ({
-      ...medida,
-      estado: medida.estado !== undefined ? Number(medida.estado) : 1 // Default a activo si no hay estado
-    })) || [];
-
-    console.log('🔍 Medidas procesadas con estado:', medidasConEstado);
-    
-    return medidasConEstado as unknown as MedidaData[];
+    // Devolver los datos directamente sin procesamiento
+    return data as MedidaData[];
   } catch (error) {
     console.error('Error en listMedidas:', error);
     throw error;
