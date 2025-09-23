@@ -54,10 +54,10 @@ export interface ProductoData {
   id_tipo_zona?: number;
   ultimo_costo?: number;
   id_proveedor?: number;
-  frecuencia?: number;
+  frecuencia?: string;
   controla_existencia?: number;
   controla_lotes?: number;
-  imgruta?: string;
+  imgbase64?: string;
   id_usuario?: number;
   fecsys?: string;
   estado: number;
@@ -99,10 +99,10 @@ export interface ProductoForm {
   id_tipo_zona?: number;
   ultimo_costo?: number;
   id_proveedor?: number;
-  frecuencia?: number;
+  frecuencia?: string;
   controla_existencia?: number;
   controla_lotes?: number;
-  imgruta?: string;
+  imgbase64?: string;
   id_usuario?: number;
   estado?: number;
   empaques?: EmpaqueAsociado[];

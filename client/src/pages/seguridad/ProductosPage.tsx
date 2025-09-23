@@ -9,28 +9,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle, 
-  AlertDialogTrigger 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/contexts/LoadingContext';
 import { Can } from '@/contexts/PermissionsContext';
-import { 
-  Package, 
-  Plus, 
-  Edit, 
-  Lock, 
-  Search, 
-  Loader2, 
-  Save, 
+import {
+  Package,
+  Plus,
+  Edit,
+  Lock,
+  Search,
+  Loader2,
+  Save,
   RefreshCw,
   CheckCircle,
   Trash2
@@ -104,7 +104,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
       handleFileSelect(files[0]);
@@ -126,13 +126,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
 
   return (
     <div
-      className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${
-        isDragOver 
-          ? 'border-cyan-500 bg-cyan-50' 
-          : value 
-            ? 'border-gray-300 bg-white' 
+      className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${isDragOver
+          ? 'border-cyan-500 bg-cyan-50'
+          : value
+            ? 'border-gray-300 bg-white'
             : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
-      }`}
+        }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -140,9 +139,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
     >
       {value ? (
         <div className="relative w-full h-full">
-          <img 
-            src={value} 
-            alt="Imagen del producto" 
+          <img
+            src={value}
+            alt="Imagen del producto"
             className="w-full h-full object-cover rounded-lg"
           />
           <button
@@ -187,8 +186,8 @@ interface ProductoFormComponentProps {
   onCancel: () => void;
 }
 
-const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({ 
-  producto, 
+const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
+  producto,
   editingProducto,
   medidas,
   categorias,
@@ -197,8 +196,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   tipos,
   interfacesContables,
   presentacionesMedidas,
-  onSubmit, 
-  isLoading, 
+  onSubmit,
+  isLoading,
   onCancel
 }) => {
   const [formData, setFormData] = useState<ProductoForm>({
@@ -219,10 +218,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     id_tipo_zona: producto?.id_tipo_zona || undefined,
     ultimo_costo: producto?.ultimo_costo || 0,
     id_proveedor: producto?.id_proveedor || undefined,
-    frecuencia: producto?.frecuencia || 0,
+    frecuencia: producto?.frecuencia?.toString() || "semanal",
     controla_existencia: producto?.controla_existencia || 0,
     controla_lotes: producto?.controla_lotes || 0,
-    imgruta: producto?.imgruta || "",
+    imgbase64: producto?.imgbase64 || "",
   });
 
   // Estados para manejar las dependencias
@@ -230,6 +229,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [sublineasFiltradas, setSublineasFiltradas] = useState<SublineaDataFull[]>([]);
 
   const [nextCodigo, setNextCodigo] = useState<string>("");
+
 
   // Obtener el siguiente código disponible cuando se crea un nuevo producto
   React.useEffect(() => {
@@ -266,27 +266,29 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       id_tipo_zona: producto?.id_tipo_zona || undefined,
       ultimo_costo: producto?.ultimo_costo || 0,
       id_proveedor: producto?.id_proveedor || undefined,
-      frecuencia: producto?.frecuencia || 0,
+      frecuencia: producto?.frecuencia?.toString() || "semanal",
       controla_existencia: producto?.controla_existencia || 0,
       controla_lotes: producto?.controla_lotes || 0,
-      imgruta: producto?.imgruta || "",
+      imgbase64: producto?.imgbase64 || "",
     });
   }, [producto]);
 
   // Manejar edición de producto específicamente
   React.useEffect(() => {
     if (editingProducto) {
-      // Obtener la línea de la sublínea
+      // Obtener la línea directamente de la sublínea del producto
       const idLinea = editingProducto.inv_sublineas?.id_linea || 0;
+      const idCategoria = editingProducto.id_categoria || 0;
       
+      // Inicializar formData con los valores correctos
       setFormData({
         id: editingProducto.id || 0,
         codigo: editingProducto.codigo || "",
         nombre: editingProducto.nombre || "",
         id_medida: editingProducto.id_medida || 0,
         id_tipo_producto: editingProducto.id_tipo_producto || 0,
-        id_categoria: editingProducto.id_categoria || 0,
-        id_linea: idLinea, // Usar la línea de la sublínea
+        id_categoria: idCategoria,
+        id_linea: idLinea,
         id_sublineas: editingProducto.id_sublineas || 0,
         id_interfaz_contable: editingProducto.id_interfaz_contable || undefined,
         id_marca: editingProducto.id_marca || undefined,
@@ -296,69 +298,102 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_proveedor: editingProducto.id_proveedor || undefined,
         referencia: editingProducto.referencia || "",
         ultimo_costo: editingProducto.ultimo_costo || 0,
-        frecuencia: editingProducto.frecuencia || 0,
+        frecuencia: editingProducto.frecuencia?.toString() || "semanal",
         controla_existencia: editingProducto.controla_existencia || 0,
         controla_lotes: editingProducto.controla_lotes || 0,
-        imgruta: editingProducto.imgruta || "",
+        imgbase64: editingProducto.imgbase64 || "",
       });
 
-      // Filtrar líneas inmediatamente para la categoría del producto
-      if (editingProducto.id_categoria && editingProducto.id_categoria > 0) {
-        const lineasDeCategoria = lineas.filter(linea => linea.id_categoria === editingProducto.id_categoria);
-        setLineasFiltradas(lineasDeCategoria);
-        console.log("🔍 Líneas filtradas para edición:", lineasDeCategoria.length, lineasDeCategoria.map(l => ({ id: l.id, nombre: l.nombre })));
-      }
-
-      // Filtrar sublíneas inmediatamente para la línea del producto
-      if (idLinea && idLinea > 0) {
+      // Filtrar líneas y sublíneas cuando los datos estén disponibles
+      if (lineas.length > 0 && sublineas.length > 0) {
+        // Filtrar líneas por categoría
+        const lineasDeCategoria = lineas.filter(l => l.id_categoria === idCategoria);
+        
+        // Buscar la línea específica que necesitamos
+        const lineaEspecifica = lineas.find(l => l.id === idLinea);
+        
+        // En modo edición, incluir la línea específica del producto aunque no pertenezca a la categoría
+        let lineasFinales = lineasDeCategoria;
+        if (editingProducto && lineaEspecifica && !lineasDeCategoria.find(l => l.id === idLinea)) {
+          lineasFinales = [lineaEspecifica, ...lineasDeCategoria];
+        }
+        
+        setLineasFiltradas(lineasFinales);
+        
+        // Filtrar sublíneas por línea
         const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === idLinea);
         setSublineasFiltradas(sublineasDeLinea);
-        console.log("🔍 Sublíneas filtradas para edición:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre })));
-        console.log("🔍 ID de sublínea del producto:", editingProducto.id_sublineas);
+        
+        // Establecer valores con timeout para asegurar que los selects estén listos
+        setTimeout(() => {
+          setFormData(prev => ({
+            ...prev,
+            id_linea: idLinea,
+            id_categoria: idCategoria,
+            id_sublineas: editingProducto.id_sublineas || 0
+          }));
+        }, 100);
       }
     }
   }, [editingProducto, lineas, sublineas]);
 
-  // Filtrar líneas cuando cambie la categoría (solo si no estamos editando)
+  // Filtrar líneas cuando cambie la categoría
   React.useEffect(() => {
-    if (!editingProducto && formData.id_categoria && formData.id_categoria > 0) {
+    if (formData.id_categoria && formData.id_categoria > 0 && lineas.length > 0) {
       const lineasDeCategoria = lineas.filter(linea => linea.id_categoria === formData.id_categoria);
       setLineasFiltradas(lineasDeCategoria);
-      
-      // Resetear línea y sublínea cuando cambie la categoría
-      setFormData(prev => ({
-        ...prev,
-        id_linea: 0,
-        id_sublineas: 0
-      }));
+
+      // Solo resetear línea y sublínea si NO estamos editando
+      if (!editingProducto) {
+        setFormData(prev => ({
+          ...prev,
+          id_linea: 0,
+          id_sublineas: 0
+        }));
+      }
     } else if (!editingProducto) {
       setLineasFiltradas([]);
     }
   }, [formData.id_categoria, lineas, editingProducto]);
 
-  // Filtrar sublíneas cuando cambie la línea (solo si no estamos editando)
+  // Manejar líneas en modo edición - se ejecuta solo cuando se inicia la edición
   React.useEffect(() => {
-    if (!editingProducto) {
-      console.log("🔄 Filtrando sublíneas para línea:", formData.id_linea, "Total sublíneas:", sublineas.length);
-      if (formData.id_linea && formData.id_linea > 0) {
-        const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
-        console.log("📋 Sublíneas encontradas:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre, id_linea: s.id_linea })));
-        setSublineasFiltradas(sublineasDeLinea);
+    if (editingProducto && lineas.length > 0 && formData.id_linea && formData.id_linea > 0) {
+      // Buscar la línea específica del producto
+      const lineaEspecifica = lineas.find(l => l.id === formData.id_linea);
+      if (lineaEspecifica) {
+        // Obtener líneas de la categoría del producto
+        const lineasDeCategoria = lineas.filter(l => l.id_categoria === formData.id_categoria);
         
-        // Resetear sublínea cuando cambie la línea
+        // Crear lista final: línea específica + líneas de categoría (sin duplicados)
+        const lineasFinales = [lineaEspecifica, ...lineasDeCategoria.filter(l => l.id !== formData.id_linea)];
+        
+        setLineasFiltradas(lineasFinales);
+      }
+    }
+  }, [editingProducto, lineas, formData.id_linea, formData.id_categoria]);
+
+  // Filtrar sublíneas cuando cambie la línea (solo en modo creación)
+  React.useEffect(() => {
+    if (!editingProducto && formData.id_linea && formData.id_linea > 0 && sublineas.length > 0) {
+      const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
+      setSublineasFiltradas(sublineasDeLinea);
+
+      // Resetear sublínea cuando cambie la línea en modo creación con timeout
+      setTimeout(() => {
         setFormData(prev => ({
           ...prev,
           id_sublineas: 0
         }));
-      } else {
-        setSublineasFiltradas([]);
-      }
+      }, 50);
+    } else if (!editingProducto) {
+      setSublineasFiltradas([]);
     }
   }, [formData.id_linea, sublineas, editingProducto]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Convertir empaques al formato esperado por el servicio
     const empaquesData = empaques.map(empaque => ({
       id_presentacion: presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id || 0,
@@ -383,22 +418,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (field === 'codigo') {
       return;
     }
-    
+
     setFormData(prev => {
       const newData = {
-      ...prev,
-      [field]: value
+        ...prev,
+        [field]: value
       };
 
-      // Si cambia la categoría, resetear línea y sublínea
-      if (field === 'id_categoria') {
-        newData.id_linea = undefined;
-        newData.id_sublineas = 0;
-      }
+      // Solo resetear en modo creación, no en edición
+      if (!editingProducto) {
+        // Si cambia la categoría, resetear línea y sublínea
+        if (field === 'id_categoria') {
+          newData.id_linea = undefined;
+          newData.id_sublineas = 0;
+        }
 
-      // Si cambia la línea, resetear sublínea
-      if (field === 'id_linea') {
-        newData.id_sublineas = 0;
+        // Si cambia la línea, resetear sublínea
+        if (field === 'id_linea') {
+          newData.id_sublineas = 0;
+        }
       }
 
       return newData;
@@ -414,7 +452,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       };
       return newForm;
     });
-    
+
     // Generar descripción automáticamente si hay factor
     if (empaqueForm.factor) {
       generateDescripcion(tipo, empaqueForm.factor);
@@ -429,7 +467,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       };
       return newForm;
     });
-    
+
     // Generar descripción automáticamente si hay tipo
     if (empaqueForm.tipo) {
       generateDescripcion(empaqueForm.tipo, factor);
@@ -437,31 +475,16 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   };
 
   const generateDescripcion = (tipo: string, factor: string) => {
-    console.log("🔧 generateDescripcion llamado:", { tipo, factor, id_medida: formData.id_medida });
-    console.log("🔧 Medidas disponibles:", medidas);
-    
     if (tipo && factor && formData.id_medida && formData.id_medida > 0) {
       const medida = medidas.find(m => m.id === formData.id_medida);
-      console.log("🔧 Medida encontrada:", medida);
-      
+
       if (medida && medida.abreviatura) {
         const descripcion = `${tipo} X ${factor}${medida.abreviatura}`;
-        console.log("🔧 Descripción generada:", descripcion);
-        setEmpaqueForm(prev => {
-          console.log("🔧 Estado anterior:", prev);
-          console.log("🔧 Actualizando empaqueForm con descripción:", descripcion);
-          const nuevoEstado = {
-            ...prev,
-            descripcion
-          };
-          console.log("🔧 Nuevo estado que se va a establecer:", nuevoEstado);
-          return nuevoEstado;
-        });
-      } else {
-        console.log("❌ No se encontró abreviatura:", medida);
+        setEmpaqueForm(prev => ({
+          ...prev,
+          descripcion
+        }));
       }
-    } else {
-      console.log("❌ Faltan datos:", { tipo, factor, id_medida: formData.id_medida });
     }
   };
 
@@ -501,24 +524,35 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     descripcion: ''
   });
 
-  // Log para debuggear empaqueForm
+
+
+  // Inicializar valores de display cuando se edita un producto
   React.useEffect(() => {
-    console.log("📝 empaqueForm actualizado:", empaqueForm);
-  }, [empaqueForm]);
+    if (editingProducto) {
+      if (editingProducto.ultimo_costo && editingProducto.ultimo_costo > 0) {
+        const formatted = editingProducto.ultimo_costo.toLocaleString('en-US', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        setUltimoCostoDisplay(formatted);
+      } else {
+        setUltimoCostoDisplay('0.00');
+      }
+    }
+  }, [editingProducto]);
 
   // Filtrar presentaciones por unidad seleccionada
   const presentacionesFiltradas = useMemo(() => {
     if (!formData.id_medida || formData.id_medida === 0) {
       return [];
     }
-    return presentacionesMedidas.filter(presentacion => 
+    return presentacionesMedidas.filter(presentacion =>
       presentacion.id_medida === formData.id_medida
     );
   }, [presentacionesMedidas, formData.id_medida]);
 
   // Limpiar formulario de empaques cuando cambie la unidad
   React.useEffect(() => {
-    console.log("🧹 Limpiando empaqueForm porque cambió id_medida:", formData.id_medida);
     setEmpaqueForm({ tipo: '', factor: '', descripcion: '' });
     setEmpaques([]);
   }, [formData.id_medida]);
@@ -548,7 +582,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
   const handleUltimoCostoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    
+
     // Si el campo está vacío, mostrar 0.00
     if (inputValue === '') {
       setUltimoCostoDisplay('0.00');
@@ -558,25 +592,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       }));
       return;
     }
-    
+
     // Remover todos los caracteres no numéricos excepto un punto decimal
     let cleanValue = inputValue.replace(/[^0-9.]/g, '');
-    
+
     // Asegurar que solo haya un punto decimal
     const parts = cleanValue.split('.');
     if (parts.length > 2) {
       cleanValue = parts[0] + '.' + parts.slice(1).join('');
     }
-    
+
     // Limitar a 2 decimales
     if (parts.length === 2 && parts[1].length > 2) {
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
-    
+
     // Formatear en tiempo real
     const formatted = formatCurrencyDisplay(cleanValue);
     setUltimoCostoDisplay(formatted);
-    
+
     // Convertir a número y actualizar el estado
     const numericValue = parseFloat(cleanValue) || 0;
     setFormData(prev => ({
@@ -599,7 +633,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (parts.length === 2 && parts[1].length > 2) {
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
-    
+
     // Formatear en tiempo real
     const formatted = formatCurrencyDisplay(cleanValue);
     setCostoPromedioDisplay(formatted);
@@ -619,7 +653,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (parts.length === 2 && parts[1].length > 2) {
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
-    
+
     // Formatear en tiempo real
     const formatted = formatCurrencyDisplay(cleanValue);
     setPrecioMayoristaDisplay(formatted);
@@ -639,7 +673,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (parts.length === 2 && parts[1].length > 2) {
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
-    
+
     // Formatear en tiempo real
     const formatted = formatCurrencyDisplay(cleanValue);
     setPrecioMinoristaDisplay(formatted);
@@ -659,7 +693,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (parts.length === 2 && parts[1].length > 2) {
       cleanValue = parts[0] + '.' + parts[1].substring(0, 2);
     }
-    
+
     // Formatear en tiempo real
     const formatted = formatCurrencyDisplay(cleanValue);
     setPrecioPublicoDisplay(formatted);
@@ -667,7 +701,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
   const formatCurrencyDisplay = (value: string) => {
     if (!value) return '0.00';
-    
+
     // Solo formatear separadores de miles, sin decimales automáticos
     if (value.includes('.')) {
       const [integerPart, decimalPart] = value.split('.');
@@ -682,15 +716,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
   const formatOnBlur = (value: string) => {
     if (!value || value === '') return '0.00';
-    
+
     // Remover comas para procesar el valor
     const cleanValue = value.replace(/,/g, '');
-    
+
     // Si tiene punto decimal, formatear la parte entera y asegurar 2 decimales
     if (cleanValue.includes('.')) {
       const [integerPart, decimalPart] = cleanValue.split('.');
       const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      
+
       // Asegurar que siempre tenga 2 decimales
       let paddedDecimal = decimalPart;
       if (decimalPart.length === 1) {
@@ -700,7 +734,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       } else if (decimalPart.length > 2) {
         paddedDecimal = decimalPart.substring(0, 2);
       }
-      
+
       return `${formattedInteger}.${paddedDecimal}`;
     } else {
       // Solo parte entera, formatear con separadores de miles y agregar .00
@@ -770,27 +804,27 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           <div className="grid grid-cols-12 gap-4">
             {/* Columna izquierda - Detalles del producto */}
             <div className="col-span-8 space-y-4">
-            {/* Nombre */}
+              {/* Nombre */}
               <div className="space-y-1">
                 <div className="flex items-center">
-              <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
+                  <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
                 </div>
-              <Input
-                id="nombre"
-                value={formData.nombre}
-                onChange={(e) => handleInputChange('nombre', e.target.value)}
-                required
+                <Input
+                  id="nombre"
+                  value={formData.nombre}
+                  onChange={(e) => handleInputChange('nombre', e.target.value)}
+                  required
                   className="h-8 text-sm bg-yellow-25"
-                autoComplete="off"
-              />
-            </div>
+                  autoComplete="off"
+                />
+              </div>
 
               {/* Características - más compacto */}
               <div className="space-y-2">
                 <div className="flex items-center">
                   <h3 className="text-sm font-normal text-gray-400">Características</h3>
                   <div className="flex-1 h-px bg-gray-300 ml-3"></div>
-          </div>
+                </div>
 
                 {/* Primera fila de características */}
                 <div className="grid grid-cols-2 gap-3">
@@ -798,44 +832,44 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="flex items-center">
                       <Label htmlFor="id_categoria" className="text-sm font-medium">Categoria</Label>
                     </div>
-              <Select
+                    <Select
                       value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
                       onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
-              >
+                    >
                       <SelectTrigger className="h-8 text-sm bg-yellow-25">
                         <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         {categorias.map((categoria) => (
                           <SelectItem key={categoria.id} value={categoria.id.toString()}>
                             {categoria.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center">
                       <Label htmlFor="id_tipo_producto" className="text-sm font-medium">Tipo Producto</Label>
                     </div>
-              <Select
+                    <Select
                       value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
                       onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
-              >
+                    >
                       <SelectTrigger className="h-8 text-sm bg-yellow-25">
                         <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         {tipos.map((tipo) => (
                           <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"}>
                             {tipo.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-            </div>
+                </div>
 
                 {/* Segunda fila de características */}
                 <div className="grid grid-cols-2 gap-3">
@@ -850,8 +884,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     >
                       <SelectTrigger className="h-8 text-sm bg-yellow-25">
                         <SelectValue placeholder={
-                          lineasFiltradas.length === 0 
-                            ? "Seleccione una categoría primero" 
+                          lineasFiltradas.length === 0
+                            ? "Seleccione una categoría primero"
                             : "Seleccionar línea"
                         } className="text-gray-400" />
                       </SelectTrigger>
@@ -875,27 +909,27 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="flex items-center">
                       <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea</Label>
                     </div>
-              <Select
-                value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
-                onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
+                    <Select
+                      value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
                       disabled={sublineasFiltradas.length === 0}
-              >
+                    >
                       <SelectTrigger className="h-8 text-sm bg-yellow-25">
                         <SelectValue placeholder={
-                          sublineasFiltradas.length === 0 
-                            ? "Seleccione una línea primero" 
+                          sublineasFiltradas.length === 0
+                            ? "Seleccione una línea primero"
                             : "Seleccionar sublínea"
                         } className="text-gray-400" />
-                </SelectTrigger>
-                <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         {sublineasFiltradas.length === 0 ? (
                           <SelectItem value="0" disabled>
                             No hay sublíneas disponibles
                           </SelectItem>
                         ) : (
                           sublineasFiltradas.map((sublinea) => (
-                    <SelectItem key={sublinea.id} value={sublinea.id.toString()}>
-                      {sublinea.nombre}
+                            <SelectItem key={sublinea.id} value={sublinea.id.toString()}>
+                              {sublinea.nombre}
                             </SelectItem>
                           ))
                         )}
@@ -921,11 +955,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         {medidas.map((medida) => (
                           <SelectItem key={medida.id} value={medida.id.toString()}>
                             {medida.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center">
@@ -939,8 +973,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       autoComplete="off"
                     />
                   </div>
-            </div>
-          </div>
+                </div>
+              </div>
 
             </div>
 
@@ -951,14 +985,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 <div className="flex items-center">
                   <Label htmlFor="codigo" className="text-sm font-medium">Código</Label>
                 </div>
-              <Input
+                <Input
                   id="codigo"
                   value={editingProducto ? formData.codigo : (nextCodigo || "Cargando...")}
                   readOnly={true}
                   className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
-                autoComplete="off"
-              />
-            </div>
+                  autoComplete="off"
+                />
+              </div>
 
               {/* IMAGEN - más compacto */}
               <div className="space-y-1">
@@ -967,11 +1001,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 </div>
                 <div className="h-32">
                   <ImageUpload
-                    value={formData.imgruta}
-                    onChange={(value) => handleInputChange('imgruta', value)}
+                    value={formData.imgbase64}
+                    onChange={(value) => handleInputChange('imgbase64', value)}
                   />
                 </div>
-            </div>
+              </div>
 
               {/* Checkboxes - debajo de la imagen */}
               <div className="space-y-1">
@@ -1012,54 +1046,54 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           <div className="border-t pt-3">
             <Tabs defaultValue="precio" className="w-full">
               <TabsList className="grid w-full grid-cols-4 bg-cyan-100/60 p-1 rounded-lg">
-                <TabsTrigger 
-                  value="precio" 
+                <TabsTrigger
+                  value="precio"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                 >
                   Precio y Existencias
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="contable" 
+                <TabsTrigger
+                  value="contable"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                 >
                   Interfaz Contable
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="historia" 
+                <TabsTrigger
+                  value="historia"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                 >
                   Historia del Producto
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="empaques" 
+                <TabsTrigger
+                  value="empaques"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                 >
                   Empaques Asociados
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="precio" className="mt-3">
                 <div className="grid grid-cols-12 gap-4">
                   {/* Columna izquierda - Costos e Inventario */}
-            <div className="col-span-3 space-y-2">
+                  <div className="col-span-3 space-y-2">
                     <div className="space-y-1">
                       <div className="flex items-center">
-              <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
+                        <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
                       </div>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-              <Input
-                id="ultimo_costo"
+                        <Input
+                          id="ultimo_costo"
                           type="text"
                           value={formatCurrencyDisplay(ultimoCostoDisplay)}
                           onChange={handleUltimoCostoChange}
                           onFocus={handleUltimoCostoFocus}
                           onBlur={handleUltimoCostoBlur}
                           className="h-8 text-sm pl-8 bg-yellow-25"
-                autoComplete="off"
-              />
-            </div>
-          </div>
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
 
                     <div className="space-y-1">
                       <div className="flex items-center">
@@ -1067,56 +1101,59 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       </div>
                       <div className="relative">
                         <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-              <Input
+                        <Input
                           id="costo_promedio"
                           type="text"
                           value={formatCurrencyDisplay(costoPromedioDisplay)}
                           onChange={handleCostoPromedioChange}
                           onFocus={handleCostoPromedioFocus}
                           onBlur={handleCostoPromedioBlur}
-                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
                           autoComplete="off"
+                          disabled
                         />
                       </div>
                     </div>
-                    
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia Actual</Label>
-                      </div>
-                      <Input
-                        id="existencia_actual"
-                type="number"
-                        className="h-8 text-sm bg-yellow-25"
-                autoComplete="off"
-              />
-            </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia de Compra</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
+                        </div>
+                        <Input
+                          id="existencia_actual"
+                          type="number"
+                          value="0"
+                          className="h-8 text-sm bg-gray-100 text-gray-400"
+                          autoComplete="off"
+                          disabled
+                        />
                       </div>
-                      <div className="flex gap-2">
-                        <Select>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                        </div>
+                        <Select
+                          value={formData.frecuencia || "semanal"}
+                          onValueChange={(value) => handleInputChange('frecuencia', value)}
+                        >
                           <SelectTrigger className="h-8 text-sm bg-yellow-25">
                             <SelectValue placeholder="Semanal" />
-                </SelectTrigger>
-                <SelectContent>
+                          </SelectTrigger>
+                          <SelectContent>
                             <SelectItem value="diaria">Diaria</SelectItem>
                             <SelectItem value="semanal">Semanal</SelectItem>
                             <SelectItem value="mensual">Mensual</SelectItem>
                             <SelectItem value="trimestral">Trimestral</SelectItem>
-                </SelectContent>
-              </Select>
-                        <Button type="button" variant="outline" size="sm" className="h-8 px-3">
-                          Días
-                        </Button>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-            </div>
+                  </div>
 
                   {/* Columna central - Precios */}
-            <div className="col-span-3 space-y-2">
+                  <div className="col-span-3 space-y-2">
                     <div className="space-y-1">
                       <div className="flex items-center">
                         <Label htmlFor="precio_mayorista" className="text-sm font-medium">Precio Mayorista</Label>
@@ -1130,12 +1167,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           onChange={handlePrecioMayoristaChange}
                           onFocus={handlePrecioMayoristaFocus}
                           onBlur={handlePrecioMayoristaBlur}
-                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
                           autoComplete="off"
+                          disabled
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-1">
                       <div className="flex items-center">
                         <Label htmlFor="precio_minorista" className="text-sm font-medium">Precio Minorista</Label>
@@ -1149,12 +1187,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           onChange={handlePrecioMinoristaChange}
                           onFocus={handlePrecioMinoristaFocus}
                           onBlur={handlePrecioMinoristaBlur}
-                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
                           autoComplete="off"
+                          disabled
                         />
                       </div>
                     </div>
-                    
+
                     <div className="space-y-1">
                       <div className="flex items-center">
                         <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
@@ -1168,8 +1207,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           onChange={handlePrecioPublicoChange}
                           onFocus={handlePrecioPublicoFocus}
                           onBlur={handlePrecioPublicoBlur}
-                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
                           autoComplete="off"
+                          disabled
                         />
                       </div>
                     </div>
@@ -1209,7 +1249,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                      
+
                       <div className="space-y-1">
                         <div className="flex items-center">
                           <Label htmlFor="iva" className="text-sm font-medium">% IVA</Label>
@@ -1223,7 +1263,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           autoComplete="off"
                         />
                       </div>
-                      
+
                       <div className="space-y-1">
                         <div className="flex items-center">
                           <Label htmlFor="retencion" className="text-sm font-medium">% Retención</Label>
@@ -1246,7 +1286,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <h4 className="text-sm font-normal text-gray-400">Cuentas / Contabilidad</h4>
                       <div className="flex-1 h-px bg-gray-300 ml-3"></div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-3">
                         <div className="space-y-1">
@@ -1270,7 +1310,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <Label className="text-sm font-medium">Cuenta de IVA en Compras</Label>
@@ -1292,7 +1332,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <Label className="text-sm font-medium">Cuenta Retención en Compras</Label>
@@ -1314,7 +1354,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <Label className="text-sm font-medium">Cuenta Costo Ventas o Producción</Label>
@@ -1337,7 +1377,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="space-y-3">
                         <div className="space-y-1">
                           <div className="flex items-center">
@@ -1360,7 +1400,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <Label className="text-sm font-medium">Cuenta de IVA en Ventas</Label>
@@ -1382,7 +1422,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             />
                           </div>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <div className="flex items-center">
                             <Label className="text-sm font-medium">Cuenta Retención en Ventas</Label>
@@ -1427,23 +1467,23 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <div className="flex items-center">
                         <Label className="text-sm font-medium">Tipo Presentación</Label>
                       </div>
-              <Select
+                      <Select
                         value={empaqueForm.tipo}
                         onValueChange={handleEmpaqueTipoChange}
                         disabled={!formData.id_medida || formData.id_medida === 0}
                       >
                         <SelectTrigger className="h-8 text-sm bg-yellow-25">
                           <SelectValue placeholder={
-                            !formData.id_medida || formData.id_medida === 0 
-                              ? "Seleccione una unidad primero" 
+                            !formData.id_medida || formData.id_medida === 0
+                              ? "Seleccione una unidad primero"
                               : "Seleccionar presentación"
                           } />
-                </SelectTrigger>
-                <SelectContent>
+                        </SelectTrigger>
+                        <SelectContent>
                           {presentacionesFiltradas.length === 0 ? (
                             <SelectItem value="0" disabled>
-                              {!formData.id_medida || formData.id_medida === 0 
-                                ? "Seleccione una unidad primero" 
+                              {!formData.id_medida || formData.id_medida === 0
+                                ? "Seleccione una unidad primero"
                                 : "No hay presentaciones disponibles"
                               }
                             </SelectItem>
@@ -1454,22 +1494,22 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                               </SelectItem>
                             ))
                           )}
-                </SelectContent>
-              </Select>
-            </div>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <div className="col-span-2 space-y-1">
                       <div className="flex items-center">
                         <Label className="text-sm font-medium">Factor</Label>
                       </div>
-              <Input
+                      <Input
                         type="text"
                         value={empaqueForm.factor}
                         onChange={(e) => handleEmpaqueFactorChange(e.target.value)}
                         className="h-8 text-sm bg-yellow-25"
-                autoComplete="off"
+                        autoComplete="off"
                         placeholder="Ej: 10"
-              />
-            </div>
+                      />
+                    </div>
                     <div className="col-span-5 space-y-1">
                       <div className="flex items-center">
                         <Label className="text-sm font-medium">Descripción</Label>
@@ -1481,12 +1521,12 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         autoComplete="off"
                         readOnly
                         placeholder="Se genera automáticamente"
-                        onChange={() => {}} // Forzar re-render
+                        onChange={() => { }} // Forzar re-render
                       />
                     </div>
                     <div className="col-span-1">
-                      <Button 
-                        type="button" 
+                      <Button
+                        type="button"
                         onClick={handleAgregarEmpaque}
                         className="h-8 w-8 p-0 bg-cyan-600 hover:bg-cyan-700"
                         disabled={!empaqueForm.tipo || !empaqueForm.factor || !empaqueForm.descripcion}
@@ -1523,10 +1563,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 <div className="text-sm">{empaque.factor}</div>
                                 <div className="text-sm">{empaque.descripcion}</div>
                                 <div className="flex justify-end">
-                                  <Button 
-                                    type="button" 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
                                     className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
                                     onClick={() => handleEliminarEmpaque(empaque.id)}
                                   >
@@ -1634,9 +1674,6 @@ const ProductosPage: React.FC = () => {
   });
 
   // Log cuando los datos cambien
-  React.useEffect(() => {
-    console.log("📊 Datos de productos actualizados:", productos);
-  }, [productos]);
 
   // Mutations
   const createProductoMutation = useMutation({
@@ -1660,15 +1697,15 @@ const ProductosPage: React.FC = () => {
         id_tipo_zona: data.id_tipo_zona || undefined,
         ultimo_costo: data.ultimo_costo || undefined,
         id_proveedor: data.id_proveedor || undefined,
-        frecuencia: data.frecuencia || 1,
+        frecuencia: data.frecuencia || "semanal",
         controla_existencia: data.controla_existencia || undefined,
         controla_lotes: data.controla_lotes || undefined,
-        imgruta: data.imgruta || undefined,
+        imgbase64: data.imgbase64 || undefined,
         id_usuario: undefined,
         fecsys: undefined,
         estado: 1
       } as ProductoData;
-      
+
       return await productosService.createProducto(productoData);
     },
     onSuccess: () => {
@@ -1758,23 +1795,21 @@ const ProductosPage: React.FC = () => {
 
   // Filtros
   const productosFiltrados = useMemo(() => {
-    console.log("🔍 Filtrando productos. Total:", productos.length, "Filtros:", { searchTerm, statusFilter });
     const filtered = (productos as ProductoData[]).filter((producto: ProductoData) => {
-      const matchesSearch = 
+      const matchesSearch =
         (producto.codigo && producto.codigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
         producto.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (producto.referencia && producto.referencia.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (producto.inv_medidas?.nombre && producto.inv_medidas.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (producto.inv_categorias?.nombre && producto.inv_categorias.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (producto.inv_sublineas?.nombre && producto.inv_sublineas.nombre.toLowerCase().includes(searchTerm.toLowerCase()));
-      
-      const matchesStatus = statusFilter === "all" || 
+
+      const matchesStatus = statusFilter === "all" ||
         (statusFilter === "active" && producto.estado === 1) ||
         (statusFilter === "inactive" && producto.estado === 0);
-      
+
       return matchesSearch && matchesStatus;
     });
-    console.log("🔍 Productos filtrados:", filtered.length, "IDs:", filtered.map(p => p.id));
     return filtered;
   }, [productos, searchTerm, statusFilter]);
 
@@ -1805,7 +1840,7 @@ const ProductosPage: React.FC = () => {
           Gestión de Productos
         </h1>
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-cyan-100/60 p-1 rounded-lg">
           <TabsTrigger
