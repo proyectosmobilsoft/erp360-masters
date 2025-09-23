@@ -42,6 +42,7 @@ import { lineasService, LineaData } from '@/services/lineasService';
 import { tiposService, TipoData } from '@/services/tiposService';
 import { interfazContableService, InterfazContableData } from '@/services/interfazContableService';
 import { presentacionMedidasService, PresentacionMedidaData } from '@/services/presentacionMedidasService';
+import { productosUnidadesService, ProductoUnidadData } from '@/services/productosUnidadesService';
 import { sublineasService } from '@/services/sublineasService';
 
 // Image Upload Component
@@ -275,6 +276,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   // Manejar edición de producto específicamente
   React.useEffect(() => {
     if (editingProducto) {
+      // Obtener la línea de la sublínea
+      const idLinea = editingProducto.inv_sublineas?.id_linea || 0;
+      
       setFormData({
         id: editingProducto.id || 0,
         codigo: editingProducto.codigo || "",
@@ -282,7 +286,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_medida: editingProducto.id_medida || 0,
         id_tipo_producto: editingProducto.id_tipo_producto || 0,
         id_categoria: editingProducto.id_categoria || 0,
-        id_linea: (editingProducto as any).id_linea || 0,
+        id_linea: idLinea, // Usar la línea de la sublínea
         id_sublineas: editingProducto.id_sublineas || 0,
         id_interfaz_contable: editingProducto.id_interfaz_contable || undefined,
         id_marca: editingProducto.id_marca || undefined,
@@ -297,45 +301,81 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         controla_lotes: editingProducto.controla_lotes || 0,
         imgruta: editingProducto.imgruta || "",
       });
-    }
-  }, [editingProducto]);
 
-  // Filtrar líneas cuando cambie la categoría
+      // Filtrar líneas inmediatamente para la categoría del producto
+      if (editingProducto.id_categoria && editingProducto.id_categoria > 0) {
+        const lineasDeCategoria = lineas.filter(linea => linea.id_categoria === editingProducto.id_categoria);
+        setLineasFiltradas(lineasDeCategoria);
+        console.log("🔍 Líneas filtradas para edición:", lineasDeCategoria.length, lineasDeCategoria.map(l => ({ id: l.id, nombre: l.nombre })));
+      }
+
+      // Filtrar sublíneas inmediatamente para la línea del producto
+      if (idLinea && idLinea > 0) {
+        const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === idLinea);
+        setSublineasFiltradas(sublineasDeLinea);
+        console.log("🔍 Sublíneas filtradas para edición:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre })));
+        console.log("🔍 ID de sublínea del producto:", editingProducto.id_sublineas);
+      }
+    }
+  }, [editingProducto, lineas, sublineas]);
+
+  // Filtrar líneas cuando cambie la categoría (solo si no estamos editando)
   React.useEffect(() => {
-    if (formData.id_categoria && formData.id_categoria > 0) {
+    if (!editingProducto && formData.id_categoria && formData.id_categoria > 0) {
       const lineasDeCategoria = lineas.filter(linea => linea.id_categoria === formData.id_categoria);
       setLineasFiltradas(lineasDeCategoria);
+      
       // Resetear línea y sublínea cuando cambie la categoría
       setFormData(prev => ({
         ...prev,
         id_linea: 0,
         id_sublineas: 0
       }));
-    } else {
+    } else if (!editingProducto) {
       setLineasFiltradas([]);
     }
-  }, [formData.id_categoria, lineas]);
+  }, [formData.id_categoria, lineas, editingProducto]);
 
-  // Filtrar sublíneas cuando cambie la línea
+  // Filtrar sublíneas cuando cambie la línea (solo si no estamos editando)
   React.useEffect(() => {
-    console.log("🔄 Filtrando sublíneas para línea:", formData.id_linea, "Total sublíneas:", sublineas.length);
-    if (formData.id_linea && formData.id_linea > 0) {
-      const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
-      console.log("📋 Sublíneas encontradas:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre, id_linea: s.id_linea })));
-      setSublineasFiltradas(sublineasDeLinea);
-      // Resetear sublínea cuando cambie la línea
-      setFormData(prev => ({
-        ...prev,
-        id_sublineas: 0
-      }));
-    } else {
-      setSublineasFiltradas([]);
+    if (!editingProducto) {
+      console.log("🔄 Filtrando sublíneas para línea:", formData.id_linea, "Total sublíneas:", sublineas.length);
+      if (formData.id_linea && formData.id_linea > 0) {
+        const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
+        console.log("📋 Sublíneas encontradas:", sublineasDeLinea.length, sublineasDeLinea.map(s => ({ id: s.id, nombre: s.nombre, id_linea: s.id_linea })));
+        setSublineasFiltradas(sublineasDeLinea);
+        
+        // Resetear sublínea cuando cambie la línea
+        setFormData(prev => ({
+          ...prev,
+          id_sublineas: 0
+        }));
+      } else {
+        setSublineasFiltradas([]);
+      }
     }
-  }, [formData.id_linea, sublineas]);
+  }, [formData.id_linea, sublineas, editingProducto]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    // Convertir empaques al formato esperado por el servicio
+    const empaquesData = empaques.map(empaque => ({
+      id_presentacion: presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id || 0,
+      factor: parseFloat(empaque.factor) || 0,
+      descripcion: empaque.descripcion
+    }));
+
+    // Filtrar campos que no existen en la tabla de productos
+    const { id_linea, ...productoData } = formData;
+
+    // Incluir empaques en los datos del producto
+    const dataWithEmpaques = {
+      ...productoData,
+      empaques: empaquesData
+    };
+
+    onSubmit(dataWithEmpaques);
   };
 
   const handleInputChange = (field: keyof ProductoForm, value: string | number) => {
@@ -482,6 +522,29 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     setEmpaqueForm({ tipo: '', factor: '', descripcion: '' });
     setEmpaques([]);
   }, [formData.id_medida]);
+
+  // Cargar empaques existentes al editar producto
+  React.useEffect(() => {
+    if (editingProducto && editingProducto.id) {
+      productosUnidadesService.getProductosUnidadesByProducto(editingProducto.id)
+        .then(empaquesData => {
+          // Convertir empaques de la base de datos al formato de la UI
+          const empaquesUI = empaquesData.map(empaque => ({
+            id: empaque.id.toString(),
+            tipo: empaque.inv_presentacion_medidas?.nombre || '',
+            factor: empaque.factor.toString(),
+            descripcion: empaque.descripcion
+          }));
+          setEmpaques(empaquesUI);
+        })
+        .catch(error => {
+          console.error('Error cargando empaques:', error);
+          setEmpaques([]);
+        });
+    } else {
+      setEmpaques([]);
+    }
+  }, [editingProducto]);
 
   const handleUltimoCostoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -813,7 +876,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea</Label>
                     </div>
               <Select
-                value={formData.id_sublineas.toString()}
+                value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
                 onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
                       disabled={sublineasFiltradas.length === 0}
               >

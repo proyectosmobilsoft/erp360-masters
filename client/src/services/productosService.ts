@@ -1,5 +1,41 @@
 import { supabase } from './supabaseClient';
 
+export interface EmpaqueAsociado {
+  id?: number;
+  id_presentacion: number;
+  factor: number;
+  descripcion: string;
+}
+
+// Función auxiliar para guardar empaques de un producto
+const saveProductoEmpaques = async (idProducto: number, empaques: EmpaqueAsociado[]) => {
+  if (!empaques || empaques.length === 0) return;
+
+  // Primero eliminar empaques existentes
+  await supabase
+    .from('inv_productos_unidades')
+    .delete()
+    .eq('id_producto', idProducto);
+
+  // Insertar nuevos empaques
+  const empaquesData = empaques.map(empaque => ({
+    id_producto: idProducto,
+    id_presentacion: empaque.id_presentacion,
+    factor: empaque.factor,
+    descripcion: empaque.descripcion,
+    estado: 1
+  }));
+
+  const { error } = await supabase
+    .from('inv_productos_unidades')
+    .insert(empaquesData);
+
+  if (error) {
+    console.error('Error al guardar empaques:', error);
+    throw error;
+  }
+};
+
 export interface ProductoData {
   id: number;
   codigo?: string;
@@ -36,6 +72,11 @@ export interface ProductoData {
   inv_sublineas?: {
     id: number;
     nombre: string;
+    id_linea: number;
+    inv_lineas?: {
+      id: number;
+      nombre: string;
+    };
   };
 }
 
@@ -46,7 +87,7 @@ export interface ProductoForm {
   id_medida: number;
   id_tipo_producto: number;
   id_categoria: number;
-  id_linea?: number;
+  id_linea?: number; // Campo temporal para manejar dependencias
   id_sublineas: number;
   id_interfaz_contable?: number;
   id_marca?: number;
@@ -64,6 +105,7 @@ export interface ProductoForm {
   imgruta?: string;
   id_usuario?: number;
   estado?: number;
+  empaques?: EmpaqueAsociado[];
 }
 
 export interface MedidaData {
@@ -100,7 +142,12 @@ export const listProductos = async (): Promise<ProductoData[]> => {
         ),
         inv_sublineas!id_sublineas (
           id,
-          nombre
+          nombre,
+          id_linea,
+          inv_lineas!id_linea (
+            id,
+            nombre
+          )
         )
       `)
       .order('id', { ascending: false });
@@ -189,11 +236,14 @@ export const listSublineas = async (): Promise<SublineaData[]> => {
 /**
  * Crea un nuevo producto
  */
-export const createProducto = async (producto: ProductoData): Promise<ProductoData> => {
+export const createProducto = async (producto: ProductoData & { empaques?: EmpaqueAsociado[] }): Promise<ProductoData> => {
   try {
+    // Extraer empaques del producto
+    const { empaques, ...productoData } = producto;
+
     const { data, error } = await supabase
       .from('inv_productos')
-      .insert([producto])
+      .insert([productoData])
       .select(`
         *,
         inv_medidas!id_medida (
@@ -206,7 +256,12 @@ export const createProducto = async (producto: ProductoData): Promise<ProductoDa
         ),
         inv_sublineas!id_sublineas (
           id,
-          nombre
+          nombre,
+          id_linea,
+          inv_lineas!id_linea (
+            id,
+            nombre
+          )
         )
       `)
       .single();
@@ -214,6 +269,11 @@ export const createProducto = async (producto: ProductoData): Promise<ProductoDa
     if (error) {
       console.error('Error al crear producto:', error);
       throw error;
+    }
+
+    // Guardar empaques si existen
+    if (empaques && empaques.length > 0) {
+      await saveProductoEmpaques(data.id, empaques);
     }
 
     return data;
@@ -226,11 +286,14 @@ export const createProducto = async (producto: ProductoData): Promise<ProductoDa
 /**
  * Actualiza un producto existente
  */
-export const updateProducto = async (id: number, producto: Partial<ProductoData>): Promise<ProductoData> => {
+export const updateProducto = async (id: number, producto: Partial<ProductoData> & { empaques?: EmpaqueAsociado[] }): Promise<ProductoData> => {
   try {
+    // Extraer empaques del producto
+    const { empaques, ...productoData } = producto;
+
     const { data, error } = await supabase
       .from('inv_productos')
-      .update(producto)
+      .update(productoData)
       .eq('id', id)
       .select(`
         *,
@@ -244,7 +307,12 @@ export const updateProducto = async (id: number, producto: Partial<ProductoData>
         ),
         inv_sublineas!id_sublineas (
           id,
-          nombre
+          nombre,
+          id_linea,
+          inv_lineas!id_linea (
+            id,
+            nombre
+          )
         )
       `)
       .single();
@@ -252,6 +320,11 @@ export const updateProducto = async (id: number, producto: Partial<ProductoData>
     if (error) {
       console.error('Error al actualizar producto:', error);
       throw error;
+    }
+
+    // Guardar empaques si existen
+    if (empaques !== undefined) {
+      await saveProductoEmpaques(id, empaques);
     }
 
     return data;
