@@ -48,7 +48,8 @@ import {
   CheckCircle,
   Trash2,
   ChevronDown,
-  Eye
+  Eye,
+  X
 } from 'lucide-react';
 import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
@@ -218,6 +219,13 @@ interface ProductoFormComponentProps {
   ingredientesRecetaFormulario: any[];
   setIngredientesRecetaFormulario: (value: any[]) => void;
   onVerIngredientesRecetaFormulario: (ingrediente: any) => void;
+  // Props para unidades de servicio
+  unidadesServicio: any[];
+  unidadesServicioAsignadas: any[];
+  nuevaUnidadServicio: {id_unidad_servicio: number; no_ppl: number};
+  setNuevaUnidadServicio: (value: {id_unidad_servicio: number; no_ppl: number}) => void;
+  handleAgregarUnidadServicio: () => void;
+  handleEliminarUnidadServicio: (idUnidad: number) => void;
 }
 
 const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
@@ -250,7 +258,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   setRecetaSeleccionadaFormulario,
   ingredientesRecetaFormulario,
   setIngredientesRecetaFormulario,
-  onVerIngredientesRecetaFormulario
+  onVerIngredientesRecetaFormulario,
+  unidadesServicio,
+  unidadesServicioAsignadas,
+  nuevaUnidadServicio,
+  setNuevaUnidadServicio,
+  handleAgregarUnidadServicio,
+  handleEliminarUnidadServicio
 }) => {
   const [formData, setFormData] = useState<ProductoForm>({
     codigo: producto?.codigo || "",
@@ -2743,13 +2757,109 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="space-y-4">
                       <div className="bg-purple-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-purple-800 mb-4">Unidades de Servicio</h3>
-                        <div className="space-y-3">
-                          <div>
-                            <Label className="text-sm font-medium text-gray-700">Configuración de Unidades</Label>
-                            <div className="text-sm text-gray-600 mt-2">
-                              Aquí se configurarán las unidades de servicio para la receta.
+                        
+                        {/* Formulario para agregar unidad de servicio */}
+                        <div className="bg-white p-3 rounded-lg border border-purple-200 mb-4">
+                          <div className="grid grid-cols-12 gap-3 items-end">
+                            <div className="col-span-8 space-y-1">
+                              <Label className="text-sm font-medium text-gray-700">Unidad de Servicio</Label>
+                              <Select
+                                value={nuevaUnidadServicio.id_unidad_servicio.toString()}
+                                onValueChange={(value) => {
+                                  const unidadSeleccionada = unidadesServicio.find(u => u.id === parseInt(value));
+                                  setNuevaUnidadServicio({
+                                    id_unidad_servicio: parseInt(value),
+                                    no_ppl: unidadSeleccionada?.no_ppl || 1
+                                  });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                                  <SelectValue placeholder="Seleccionar unidad de servicio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {unidadesServicio
+                                    .filter(unidad => !unidadesServicioAsignadas.find(u => u.id === unidad.id))
+                                    .map((unidad) => (
+                                    <SelectItem key={unidad.id} value={unidad.id.toString()}>
+                                      {unidad.nombre_servicio}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="col-span-2 space-y-1">
+                              <Label className="text-sm font-medium text-gray-700">N° PPL</Label>
+                              <Input
+                                type="number"
+                                value={nuevaUnidadServicio.no_ppl}
+                                disabled
+                                className="h-8 text-sm bg-gray-100 text-gray-600"
+                                readOnly
+                              />
+                            </div>
+
+                            <div className="col-span-2 flex justify-end">
+                              <Button
+                                type="button"
+                                onClick={handleAgregarUnidadServicio}
+                                disabled={nuevaUnidadServicio.id_unidad_servicio === 0}
+                                className="h-8 px-4 bg-purple-600 hover:bg-purple-700 text-white"
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Agregar
+                              </Button>
                             </div>
                           </div>
+                        </div>
+
+                        {/* Lista de unidades asignadas */}
+                        <div className="bg-white rounded-lg border border-purple-200">
+                          <div className="p-3 border-b border-purple-200 bg-blue-100">
+                            <h4 className="text-sm font-medium text-blue-800">Unidades Asignadas</h4>
+                          </div>
+                          
+                          {unidadesServicioAsignadas.length === 0 ? (
+                            <div className="p-6 text-center text-gray-500">
+                              <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                              <p className="text-sm">No hay unidades de servicio asignadas</p>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full">
+                                <thead>
+                                  <tr className="bg-blue-100">
+                                    <th className="px-4 py-2 text-left text-sm font-medium text-blue-800">Código</th>
+                                    <th className="px-4 py-2 text-left text-sm font-medium text-blue-800">Unidad</th>
+                                    <th className="px-4 py-2 text-left text-sm font-medium text-blue-800">Municipio</th>
+                                    <th className="px-4 py-2 text-center text-sm font-medium text-blue-800">N° PPL</th>
+                                    <th className="px-4 py-2 text-center text-sm font-medium text-blue-800">Acción</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {unidadesServicioAsignadas.map((unidad, index) => (
+                                    <tr key={unidad.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.codigo || unidad.id}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.nombre_servicio}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.gen_sucursales?.municipio?.nombre || 'N/A'}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 text-center">{unidad.no_ppl}</td>
+                                      <td className="px-4 py-2 text-center">
+                                        <Button
+                                          type="button"
+                                          onClick={() => handleEliminarUnidadServicio(unidad.id)}
+                                          variant="outline"
+                                          size="sm"
+                                          className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2818,6 +2928,14 @@ const ProductosPage: React.FC = () => {
   const [showIngredientesModalFormulario, setShowIngredientesModalFormulario] = useState(false);
   const [recetaSeleccionadaFormulario, setRecetaSeleccionadaFormulario] = useState<{id: number, nombre: string} | null>(null);
   const [ingredientesRecetaFormulario, setIngredientesRecetaFormulario] = useState<any[]>([]);
+  
+  // Estados para unidades de servicio
+  const [unidadesServicio, setUnidadesServicio] = useState<any[]>([]);
+  const [unidadesServicioAsignadas, setUnidadesServicioAsignadas] = useState<any[]>([]);
+  const [nuevaUnidadServicio, setNuevaUnidadServicio] = useState<{id_unidad_servicio: number; no_ppl: number}>({
+    id_unidad_servicio: 0,
+    no_ppl: 1
+  });
 
   // Función para formatear valores monetarios
   const formatCurrency = (value: number): string => {
@@ -2827,6 +2945,45 @@ const ProductosPage: React.FC = () => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     }).format(value);
+  };
+
+  // Funciones para manejar unidades de servicio
+  const loadUnidadesServicio = async () => {
+    try {
+      const { unidadServiciosService } = await import('@/services/unidadServiciosService');
+      const data = await unidadServiciosService.listUnidadesServicio();
+      const unidadesActivas = data.filter(u => u.activo);
+      setUnidadesServicio(unidadesActivas);
+      
+      // Cargar unidades asignadas si estamos editando un producto
+      if (editingProducto && editingProducto.id_tipo_zona) {
+        const idsUnidades = editingProducto.id_tipo_zona.split(',').map((id: string) => parseInt(id.trim()));
+        const unidadesAsignadas = unidadesActivas.filter(unidad => idsUnidades.includes(unidad.id));
+        setUnidadesServicioAsignadas(unidadesAsignadas);
+      } else {
+        setUnidadesServicioAsignadas([]);
+      }
+    } catch (error) {
+      console.error('Error cargando unidades de servicio:', error);
+    }
+  };
+
+  const handleAgregarUnidadServicio = () => {
+    if (nuevaUnidadServicio.id_unidad_servicio > 0) {
+      const unidad = unidadesServicio.find(u => u.id === nuevaUnidadServicio.id_unidad_servicio);
+      if (unidad && !unidadesServicioAsignadas.find(u => u.id === nuevaUnidadServicio.id_unidad_servicio)) {
+        const nuevaUnidad = {
+          ...unidad,
+          no_ppl: nuevaUnidadServicio.no_ppl
+        };
+        setUnidadesServicioAsignadas([...unidadesServicioAsignadas, nuevaUnidad]);
+        setNuevaUnidadServicio({ id_unidad_servicio: 0, no_ppl: 1 });
+      }
+    }
+  };
+
+  const handleEliminarUnidadServicio = (idUnidad: number) => {
+    setUnidadesServicioAsignadas(unidadesServicioAsignadas.filter(u => u.id !== idUnidad));
   };
   
   // Estados para utilidades del producto
@@ -3258,6 +3415,7 @@ const ProductosPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ["medidas"] });
       queryClient.invalidateQueries({ queryKey: ["medidas-principales"] });
       queryClient.invalidateQueries({ queryKey: ["categorias"] });
+      loadUnidadesServicio();
       queryClient.invalidateQueries({ queryKey: ["sublineas"] });
       queryClient.invalidateQueries({ queryKey: ["lineas"] });
       queryClient.invalidateQueries({ queryKey: ["tipos"] });
@@ -3369,7 +3527,8 @@ const ProductosPage: React.FC = () => {
       const dataWithEmpaques = {
         ...dataWithoutUtilidades,
         empaques: dataWithoutUtilidades.empaques || [],
-        ingredientes: dataWithoutUtilidades.ingredientes || []
+        ingredientes: dataWithoutUtilidades.ingredientes || [],
+        id_tipo_zona: data.id_tipo_zona || undefined
       };
       const producto = await productosService.updateProducto(id, dataWithEmpaques);
       
@@ -3770,19 +3929,35 @@ const ProductosPage: React.FC = () => {
             ingredientesRecetaFormulario={ingredientesRecetaFormulario}
             setIngredientesRecetaFormulario={setIngredientesRecetaFormulario}
             onVerIngredientesRecetaFormulario={handleVerIngredientesRecetaFormulario}
+            unidadesServicio={unidadesServicio}
+            unidadesServicioAsignadas={unidadesServicioAsignadas}
+            nuevaUnidadServicio={nuevaUnidadServicio}
+            setNuevaUnidadServicio={setNuevaUnidadServicio}
+            handleAgregarUnidadServicio={handleAgregarUnidadServicio}
+            handleEliminarUnidadServicio={handleEliminarUnidadServicio}
             onSubmit={(data) => {
               if (editingProducto) {
+                // Incluir IDs de unidades de servicio al actualizar
+                const dataWithUnidades = {
+                  ...data,
+                  id_tipo_zona: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
+                };
                 updateProductoMutation.mutate({ 
                   id: editingProducto.id!, 
-                  data,
+                  data: dataWithUnidades,
                   tiempoPreparacion: tiempoPreparacion,
                   utilidadesProducto: utilidadesProducto
                 });
               } else {
                 // Para crear, no incluir el id
                 const { id, ...createData } = data as any;
-                createProductoMutation.mutate({
+                // Incluir IDs de unidades de servicio al crear
+                const createDataWithUnidades = {
                   ...createData,
+                  id_tipo_zona: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
+                };
+                createProductoMutation.mutate({
+                  ...createDataWithUnidades,
                   tiempoPreparacion: tiempoPreparacion,
                   utilidadesProducto: utilidadesProducto
                 });

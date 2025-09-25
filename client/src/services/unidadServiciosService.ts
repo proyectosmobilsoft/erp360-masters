@@ -13,6 +13,10 @@ export interface UnidadServicioData {
     id: number;
     nombre: string;
   } | null;
+  municipio?: {
+    id: number;
+    nombre: string;
+  } | null;
 }
 
 export interface UnidadServicioForm {
@@ -38,7 +42,11 @@ export const unidadServiciosService = {
         updated_at,
         gen_sucursales!id_sucursal (
           id,
-          nombre
+          nombre,
+          municipio:gen_municipios!id_municipio (
+            id,
+            nombre
+          )
         )
       `)
       .order('id', { ascending: false });

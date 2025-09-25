@@ -93,7 +93,7 @@ export interface ProductoData {
   id_clase_servicio?: number;
   tipo_menu?: string;
   no_ciclo?: number;
-  id_tipo_zona?: number;
+  id_tipo_zona?: string;
   ultimo_costo?: number;
   id_proveedor?: number;
   frecuencia?: string;
@@ -138,7 +138,7 @@ export interface ProductoForm {
   id_clase_servicio?: number;
   tipo_menu?: string;
   no_ciclo?: number;
-  id_tipo_zona?: number;
+  id_tipo_zona?: string;
   ultimo_costo?: number;
   id_proveedor?: number;
   frecuencia?: string;
