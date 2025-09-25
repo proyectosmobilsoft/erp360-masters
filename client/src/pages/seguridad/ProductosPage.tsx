@@ -23,6 +23,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger
+} from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/contexts/LoadingContext';
 import { Can } from '@/contexts/PermissionsContext';
@@ -39,7 +47,8 @@ import {
   RefreshCw,
   CheckCircle,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  Eye
 } from 'lucide-react';
 import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
@@ -202,6 +211,13 @@ interface ProductoFormComponentProps {
   onSubmit: (data: ProductoForm & { tiempoPreparacion?: string; utilidadesProducto?: UtilidadProducto }) => void;
   isLoading: boolean;
   onCancel: () => void;
+  showIngredientesModalFormulario: boolean;
+  setShowIngredientesModalFormulario: (value: boolean) => void;
+  recetaSeleccionadaFormulario: {id: number, nombre: string} | null;
+  setRecetaSeleccionadaFormulario: (value: {id: number, nombre: string} | null) => void;
+  ingredientesRecetaFormulario: any[];
+  setIngredientesRecetaFormulario: (value: any[]) => void;
+  onVerIngredientesRecetaFormulario: (ingrediente: any) => void;
 }
 
 const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
@@ -227,7 +243,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   onUnidadTiempoPreparacionChange,
   onSubmit,
   isLoading,
-  onCancel
+  onCancel,
+  showIngredientesModalFormulario,
+  setShowIngredientesModalFormulario,
+  recetaSeleccionadaFormulario,
+  setRecetaSeleccionadaFormulario,
+  ingredientesRecetaFormulario,
+  setIngredientesRecetaFormulario,
+  onVerIngredientesRecetaFormulario
 }) => {
   const [formData, setFormData] = useState<ProductoForm>({
     codigo: producto?.codigo || "",
@@ -314,6 +337,33 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [ingredientes, setIngredientes] = useState<any[]>([]);
   const [totalIngredientes, setTotalIngredientes] = useState(0);
   const [totalPorciones, setTotalPorciones] = useState(0);
+
+  // Función para calcular totales de ingredientes
+  const calcularTotalesIngredientes = (ingredientesList: any[]) => {
+    // Separar productos y recetas
+    const productosIngredientes = ingredientesList.filter(ing => {
+      const producto = productos.find(p => p.id === ing.id_producto);
+      return producto && (!producto.id_clase_servicio || producto.id_clase_servicio === 0);
+    });
+    
+    const recetasIngredientes = ingredientesList.filter(ing => {
+      const producto = productos.find(p => p.id === ing.id_producto);
+      return producto && producto.id_clase_servicio && producto.id_clase_servicio > 0;
+    });
+
+    // Calcular totales
+    const totalProductos = productosIngredientes.reduce((sum, ing) => sum + ing.total, 0);
+    const totalRecetas = recetasIngredientes.reduce((sum, ing) => sum + ing.total, 0);
+    const totalGeneral = totalProductos + totalRecetas;
+
+    return {
+      totalProductos,
+      totalRecetas,
+      totalGeneral,
+      cantidadRecetas: recetasIngredientes.length,
+      totalPorciones: totalRecetas // Total de todas las recetas (suma de sus ingredientes)
+    };
+  };
   
   
   // Refs para mantener referencias a los valores actuales
@@ -429,6 +479,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     return text.substring(0, maxLength) + '...';
   };
 
+  // Función para formatear valores monetarios (local)
+  const formatCurrencyLocal = (value: number): string => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+
+
   // Función para calcular costo de ingredientes de receta
   const calcularCostoReceta = async (idProducto: number): Promise<number> => {
     try {
@@ -454,9 +515,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   // Funciones para manejar ingredientes
   const handleIngredienteChange = async (field: string, value: any) => {
     // Si se selecciona un producto, manejar lógica async primero
-    if (field === 'id_producto') {
-      const productoSeleccionado = productos.find(p => p.id === parseInt(value));
-      if (productoSeleccionado) {
+      if (field === 'id_producto') {
+        const productoSeleccionado = productos.find(p => p.id === parseInt(value));
+        if (productoSeleccionado) {
         // Verificar si el producto es una receta (tiene id_clase_servicio)
         const esReceta = productoSeleccionado.id_clase_servicio && productoSeleccionado.id_clase_servicio > 0;
         
@@ -516,30 +577,30 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           } else {
             // Si no es receta: comportamiento normal (lógica original)
             newForm.es_receta = false;
+          
+          // Filtrar medidas por la clase de medida del producto seleccionado
+          const medidaProducto = medidas.find(m => m.id === productoSeleccionado.id_medida);
             
-            // Filtrar medidas por la clase de medida del producto seleccionado
-            const medidaProducto = medidas.find(m => m.id === productoSeleccionado.id_medida);
-            
-            if (medidaProducto && medidaProducto.clase_medida) {
+          if (medidaProducto && medidaProducto.clase_medida) {
               // Filtrar medidas que tengan la misma clase_medida
-              const medidasFiltradas = medidas.filter(m => 
-                m.clase_medida === medidaProducto.clase_medida && m.estado === 1
-              );
+            const medidasFiltradas = medidas.filter(m => 
+              m.clase_medida === medidaProducto.clase_medida && m.estado === 1
+            );
               console.log('🔍 Filtrando medidas por clase:', {
                 medidaProducto,
                 clase_medida: medidaProducto.clase_medida,
                 medidasFiltradas,
                 totalMedidas: medidas.length
               });
-              setMedidasFiltradas(medidasFiltradas);
-            } else {
-              // Si no hay clase de medida, mostrar todas las medidas activas
+            setMedidasFiltradas(medidasFiltradas);
+          } else {
+            // Si no hay clase de medida, mostrar todas las medidas activas
               console.log('⚠️ No hay clase_medida, mostrando todas las medidas:', {
                 medidaProducto,
                 medidasActivas: medidas.filter(m => m.estado === 1).length
               });
-              setMedidasFiltradas(medidas.filter(m => m.estado === 1));
-            }
+            setMedidasFiltradas(medidas.filter(m => m.estado === 1));
+          }
           }
           
           // Calcular total inmediatamente al seleccionar producto
@@ -619,12 +680,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         nombre_producto: productos.find(p => p.id === ingredienteForm.id_producto)?.nombre || 'Producto'
       };
       
-      setIngredientes(prev => [...prev, nuevoIngrediente]);
+      const nuevosIngredientes = [...ingredientes, nuevoIngrediente];
+      setIngredientes(nuevosIngredientes);
       
-      // Actualizar totales
-      const nuevoTotal = totalIngredientes + nuevoIngrediente.total;
-      setTotalIngredientes(nuevoTotal);
-      setTotalPorciones(nuevoTotal); // Por ahora igual al total de ingredientes
+      // Calcular totales actualizados
+      const totales = calcularTotalesIngredientes(nuevosIngredientes);
+      setTotalIngredientes(totales.totalProductos);
+      setTotalPorciones(totales.totalPorciones);
       
       // Limpiar formulario
       setIngredienteForm({
@@ -640,12 +702,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   };
 
   const handleEliminarIngrediente = (id: number) => {
-    const ingredienteAEliminar = ingredientes.find(i => i.id === id);
-    if (ingredienteAEliminar) {
-      setIngredientes(prev => prev.filter(i => i.id !== id));
-      setTotalIngredientes(prev => prev - ingredienteAEliminar.total);
-      setTotalPorciones(prev => prev - ingredienteAEliminar.total);
-    }
+    const ingredientesActualizados = ingredientes.filter(i => i.id !== id);
+    setIngredientes(ingredientesActualizados);
+    
+    // Recalcular totales
+    const totales = calcularTotalesIngredientes(ingredientesActualizados);
+    setTotalIngredientes(totales.totalProductos);
+    setTotalPorciones(totales.totalPorciones);
   };
 
   // Obtener el siguiente código disponible cuando se crea un nuevo producto
@@ -2595,13 +2658,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <div className="space-y-1 mt-1">
                         <div className="border border-gray-300 rounded-lg overflow-hidden">
                           <div className="bg-blue-100 px-3 py-2 text-xs font-medium text-gray-700">
-                            <div className="grid grid-cols-6 gap-3">
-                              <div>Nombre Producto</div>
-                              <div>Cantidad</div>
-                              <div>Unidad</div>
-                              <div>Costo</div>
-                              <div>Total</div>
-                              <div></div>
+                            <div className="grid grid-cols-12 gap-2">
+                              <div className="col-span-5">Nombre Producto</div>
+                              <div className="col-span-1 text-center">Cantidad</div>
+                              <div className="col-span-1 text-center">Unidad</div>
+                              <div className="col-span-2">Costo</div>
+                              <div className="col-span-2">Total</div>
+                              <div className="col-span-1"></div>
                             </div>
                           </div>
                           <div className="bg-white">
@@ -2610,28 +2673,49 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 No Rows To Show
                               </div>
                             ) : (
-                              ingredientes.map((ingrediente) => (
-                                <div key={ingrediente.id} className="px-3 py-1.5 border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
-                                  <div className="grid grid-cols-6 gap-3 items-center">
-                                    <div className="text-xs font-medium text-gray-900 truncate">{ingrediente.nombre_producto}</div>
-                                    <div className="text-xs text-gray-700">{ingrediente.cantidad}</div>
-                                    <div className="text-xs text-gray-700">{ingrediente.unidad}</div>
-                                    <div className="text-xs text-gray-700">${ingrediente.costo_unitario.toLocaleString()}</div>
-                                    <div className="text-xs font-medium text-green-600">${ingrediente.total.toLocaleString()}</div>
-                                    <div className="flex justify-end">
+                              ingredientes.map((ingrediente) => {
+                                // Verificar si es una receta (tiene id_clase_servicio > 0)
+                                const productoEncontrado = productos.find(p => p.id === ingrediente.id_producto);
+                                const esReceta = productoEncontrado?.id_clase_servicio && productoEncontrado.id_clase_servicio > 0;
+                                
+                                return (
+                                <div 
+                                  key={ingrediente.id} 
+                                  className={`px-3 py-1.5 border-b border-gray-200 last:border-b-0 cursor-pointer transition-colors ${
+                                    esReceta 
+                                      ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400' 
+                                      : 'hover:bg-gray-50'
+                                  }`}
+                                  onClick={() => esReceta && onVerIngredientesRecetaFormulario(ingrediente)}
+                                  title={esReceta ? "Click para ver ingredientes de esta receta" : ""}
+                                >
+                                  <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5 text-xs font-medium text-gray-900 truncate flex items-center gap-1">
+                                      {ingrediente.nombre_producto}
+                                      {esReceta && <span className="text-blue-600 text-[10px]">(Receta)</span>}
+                                    </div>
+                                    <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.cantidad}</div>
+                                    <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.unidad}</div>
+                                    <div className="col-span-2 text-xs text-gray-700">{formatCurrencyLocal(ingrediente.costo_unitario)}</div>
+                                    <div className="col-span-2 text-xs font-medium text-green-600">{formatCurrencyLocal(ingrediente.total)}</div>
+                                    <div className="col-span-1 flex justify-center">
                                       <Button
                                         type="button"
                                         variant="ghost"
                                         size="sm"
                                         className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                        onClick={() => handleEliminarIngrediente(ingrediente.id)}
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Evitar que se abra el modal al hacer click en eliminar
+                                          handleEliminarIngrediente(ingrediente.id);
+                                        }}
                                       >
                                         <Trash2 className="w-3 h-3" />
                                       </Button>
                                     </div>
                                   </div>
                                 </div>
-                              ))
+                                );
+                              })
                             )}
                           </div>
                         </div>
@@ -2645,18 +2729,21 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             <div className="text-lg font-bold text-blue-600">
                               ${totalIngredientes.toLocaleString()}
                             </div>
+                            <div className="text-xs text-gray-500">Solo productos</div>
                           </div>
                           <div className="text-center">
-                            <div className="text-xs font-medium text-gray-600 mb-1">Número de Porciones</div>
+                            <div className="text-xs font-medium text-gray-600 mb-1">Total Recetas</div>
                             <div className="text-lg font-bold text-indigo-600">
-                              {ingredientes.length}
+                              ${totalPorciones.toLocaleString()}
                             </div>
+                            <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
                           </div>
                           <div className="text-center">
                             <div className="text-xs font-medium text-gray-600 mb-1">Costo Total</div>
                             <div className="text-lg font-bold text-green-600">
-                              ${totalIngredientes.toLocaleString()}
+                              ${(totalIngredientes + calcularTotalesIngredientes(ingredientes).totalRecetas).toLocaleString()}
                             </div>
+                            <div className="text-xs text-gray-500">Productos + Recetas</div>
                           </div>
                         </div>
                         <div className="mt-3 pt-3 border-t border-blue-200">
@@ -2761,6 +2848,26 @@ const ProductosPage: React.FC = () => {
   const [verMenus, setVerMenus] = useState<boolean>(false); // Filtro para mostrar solo recetas
   const [isFiltering, setIsFiltering] = useState<boolean>(false); // Loading para el filtro
   
+  // Estados para modal de ingredientes de receta
+  const [showIngredientesModal, setShowIngredientesModal] = useState(false);
+  const [recetaSeleccionada, setRecetaSeleccionada] = useState<{id: number, nombre: string} | null>(null);
+  const [ingredientesReceta, setIngredientesReceta] = useState<any[]>([]);
+  
+  // Estados para modal de ingredientes en el formulario
+  const [showIngredientesModalFormulario, setShowIngredientesModalFormulario] = useState(false);
+  const [recetaSeleccionadaFormulario, setRecetaSeleccionadaFormulario] = useState<{id: number, nombre: string} | null>(null);
+  const [ingredientesRecetaFormulario, setIngredientesRecetaFormulario] = useState<any[]>([]);
+
+  // Función para formatear valores monetarios
+  const formatCurrency = (value: number): string => {
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(value);
+  };
+  
   // Estados para utilidades del producto
   const [tiempoPreparacion, setTiempoPreparacion] = useState<string>("00:00:00");
   const [unidadTiempoPreparacion, setUnidadTiempoPreparacion] = useState<number>(0);
@@ -2842,6 +2949,27 @@ const ProductosPage: React.FC = () => {
               </TooltipProvider>
             </Can>
 
+            {/* Botón para ver ingredientes de recetas */}
+            {producto.id_clase_servicio && producto.id_clase_servicio > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleVerIngredientesReceta(producto)}
+                      aria-label="Ver ingredientes de receta"
+                    >
+                      <Eye className="h-5 w-5 text-blue-600 hover:text-blue-800 transition-colors" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Ver ingredientes</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
             {producto.estado === 1 ? (
               <Can action="accion-desactivar-producto">
                 <AlertDialog>
@@ -2883,44 +3011,44 @@ const ProductosPage: React.FC = () => {
               </Can>
             ) : (
               <>
-                <Can action="accion-activar-producto">
-                  <AlertDialog>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Activar producto"
-                            >
-                              <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Activar</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción activará el producto "{producto.nombre}".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleActivateProducto(producto.id!)}
-                        >
-                          Activar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </Can>
+              <Can action="accion-activar-producto">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Activar producto"
+                          >
+                            <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Activar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción activará el producto "{producto.nombre}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleActivateProducto(producto.id!)}
+                      >
+                        Activar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </Can>
 
                 <Can action="accion-eliminar-producto">
                   <AlertDialog>
@@ -3407,6 +3535,92 @@ const ProductosPage: React.FC = () => {
     setActiveTab("formulario");
   };
 
+  // Función para abrir modal de ingredientes de receta
+  const handleVerIngredientesReceta = async (producto: any) => {
+    try {
+      console.log('🍳 Abriendo modal de ingredientes para:', producto.nombre);
+      setRecetaSeleccionada({ id: producto.id, nombre: producto.nombre });
+      
+      // Obtener ingredientes de la receta
+      const ingredientes = await productosService.getProductoIngredientes(producto.id);
+      console.log('📋 Ingredientes obtenidos:', ingredientes);
+      
+      // Obtener todos los productos para poder mostrar los nombres correctamente
+      const todosLosProductos = await productosService.listProductos(false); // false = todos los productos
+      console.log('📋 Todos los productos disponibles:', todosLosProductos.length);
+      
+      // Agregar información del producto a cada ingrediente
+      const ingredientesConInfo = ingredientes.map(ingrediente => {
+        const productoIngrediente = todosLosProductos.find(p => p.id === ingrediente.id_producto);
+        return {
+          ...ingrediente,
+          producto_nombre: productoIngrediente?.nombre || `Producto no encontrado (ID: ${ingrediente.id_producto})`,
+          producto_info: productoIngrediente
+        };
+      });
+      
+      console.log('📋 Ingredientes con información:', ingredientesConInfo);
+      setIngredientesReceta(ingredientesConInfo);
+      setShowIngredientesModal(true);
+    } catch (error) {
+      console.error('❌ Error al obtener ingredientes:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar los ingredientes de la receta",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Función para abrir modal de ingredientes de receta desde el formulario
+  const handleVerIngredientesRecetaFormulario = async (ingrediente: any) => {
+    try {
+      console.log('🍳 Abriendo modal de ingredientes desde formulario para:', ingrediente.nombre_producto);
+      
+      // Buscar el producto en la lista de productos para obtener su información completa
+      const productoIngrediente = productos.find(p => p.id === ingrediente.id_producto);
+      
+      if (!productoIngrediente) {
+        toast({
+          title: "Error",
+          description: "No se pudo encontrar la información del producto",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setRecetaSeleccionadaFormulario({ id: productoIngrediente.id, nombre: productoIngrediente.nombre });
+      
+      // Obtener ingredientes de la receta
+      const ingredientes = await productosService.getProductoIngredientes(productoIngrediente.id);
+      console.log('📋 Ingredientes obtenidos desde formulario:', ingredientes);
+      
+      // Obtener todos los productos para poder mostrar los nombres correctamente
+      const todosLosProductos = await productosService.listProductos(false); // false = todos los productos
+      
+      // Agregar información del producto a cada ingrediente
+      const ingredientesConInfo = ingredientes.map(ingrediente => {
+        const productoIngrediente = todosLosProductos.find(p => p.id === ingrediente.id_producto);
+        return {
+          ...ingrediente,
+          producto_nombre: productoIngrediente?.nombre || `Producto no encontrado (ID: ${ingrediente.id_producto})`,
+          producto_info: productoIngrediente
+        };
+      });
+      
+      console.log('📋 Ingredientes con información desde formulario:', ingredientesConInfo);
+      setIngredientesRecetaFormulario(ingredientesConInfo);
+      setShowIngredientesModalFormulario(true);
+    } catch (error) {
+      console.error('❌ Error al obtener ingredientes desde formulario:', error);
+      toast({
+        title: "Error",
+        description: "Error al cargar los ingredientes de la receta",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleNuevoProducto = () => {
     setEditingProducto(null);
     setActiveTab("formulario");
@@ -3543,7 +3757,14 @@ const ProductosPage: React.FC = () => {
                       </TableRow>
                     ) : (
                       productosFiltrados.map((producto: ProductoData) => (
-                        <TableRow key={producto.id} className="hover:bg-gray-50 text-xs">
+                        <TableRow 
+                          key={producto.id} 
+                          className={`text-xs ${
+                            producto.id_clase_servicio && producto.id_clase_servicio > 0 
+                              ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400' 
+                              : 'hover:bg-gray-50'
+                          }`}
+                        >
                           {getTableColumns().map((column) => (
                             <TableCell key={column.key} className={column.className}>
                               {renderCellContent(producto, column.key)}
@@ -3581,6 +3802,13 @@ const ProductosPage: React.FC = () => {
             onTiempoPreparacionChange={setTiempoPreparacion}
             onUtilidadesProductoChange={setUtilidadesProducto}
             onUnidadTiempoPreparacionChange={setUnidadTiempoPreparacion}
+            showIngredientesModalFormulario={showIngredientesModalFormulario}
+            setShowIngredientesModalFormulario={setShowIngredientesModalFormulario}
+            recetaSeleccionadaFormulario={recetaSeleccionadaFormulario}
+            setRecetaSeleccionadaFormulario={setRecetaSeleccionadaFormulario}
+            ingredientesRecetaFormulario={ingredientesRecetaFormulario}
+            setIngredientesRecetaFormulario={setIngredientesRecetaFormulario}
+            onVerIngredientesRecetaFormulario={handleVerIngredientesRecetaFormulario}
             onSubmit={(data) => {
               if (editingProducto) {
                 updateProductoMutation.mutate({ 
@@ -3607,6 +3835,206 @@ const ProductosPage: React.FC = () => {
           />
         </TabsContent>
       </Tabs>
+
+      {/* Modal para mostrar ingredientes de receta */}
+      <Dialog open={showIngredientesModal} onOpenChange={setShowIngredientesModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              <span>Ingredientes de la Receta:</span>
+              <span className="font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
+                {recetaSeleccionada?.nombre}
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              Lista detallada de todos los ingredientes que componen esta receta
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            {ingredientesReceta.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Esta receta no tiene ingredientes configurados</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Resumen de costos */}
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-blue-900">Resumen de Costos</h3>
+                        <p className="text-sm text-blue-700">
+                          Total de ingredientes: {ingredientesReceta.length}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-blue-900">
+                          {formatCurrency(ingredientesReceta.reduce((total: number, ingrediente: any) => 
+                            total + (ingrediente.cantidad * (ingrediente.costo || 0)), 0
+                          ))}
+                        </p>
+                        <p className="text-xs text-blue-600">Costo total</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tabla de ingredientes compacta */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-gray-200">
+                    <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-blue-900">
+                      <div className="col-span-5">Ingrediente</div>
+                      <div className="col-span-1 text-center">Cant.</div>
+                      <div className="col-span-1 text-center">Unidad</div>
+                      <div className="col-span-2 text-right">Costo Unit.</div>
+                      <div className="col-span-3 text-right">Costo Total</div>
+                    </div>
+                  </div>
+                  
+                  {/* Body */}
+                  <div className="divide-y divide-gray-100">
+                    {ingredientesReceta.map((ingrediente: any, index: number) => (
+                      <div key={index} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <div className="grid grid-cols-12 gap-3 items-center">
+                          <div className="col-span-5">
+                            <div className="font-medium text-gray-900 text-sm truncate">
+                              {ingrediente.producto_nombre || `Producto no encontrado (ID: ${ingrediente.id_producto})`}
+                            </div>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                              {ingrediente.cantidad}
+                            </span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-xs text-gray-600 font-medium">
+                              {medidas.find(m => m.id === ingrediente.id_medida)?.abreviatura || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-xs text-gray-700">
+                              {formatCurrency(ingrediente.costo || 0)}
+                            </span>
+                          </div>
+                          <div className="col-span-3 text-right">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-semibold">
+                              {formatCurrency(ingrediente.cantidad * (ingrediente.costo || 0))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para mostrar ingredientes de receta desde el formulario */}
+      <Dialog open={showIngredientesModalFormulario} onOpenChange={setShowIngredientesModalFormulario}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              <span>Ingredientes de la Receta:</span>
+              <span className="font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-lg border border-blue-200">
+                {recetaSeleccionadaFormulario?.nombre}
+              </span>
+            </DialogTitle>
+            <DialogDescription>
+              Lista detallada de todos los ingredientes que componen esta receta
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4">
+            {ingredientesRecetaFormulario.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <p>Esta receta no tiene ingredientes configurados</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Resumen de costos */}
+                <Card className="bg-blue-50 border-blue-200">
+                  <CardContent className="pt-4">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold text-blue-900">Resumen de Costos</h3>
+                        <p className="text-sm text-blue-700">
+                          Total de ingredientes: {ingredientesRecetaFormulario.length}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-blue-900">
+                          {formatCurrency(ingredientesRecetaFormulario.reduce((total: number, ingrediente: any) => 
+                            total + (ingrediente.cantidad * (ingrediente.costo || 0)), 0
+                          ))}
+                        </p>
+                        <p className="text-xs text-blue-600">Costo total</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Tabla de ingredientes compacta */}
+                <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-3 border-b border-gray-200">
+                    <div className="grid grid-cols-12 gap-3 text-xs font-semibold text-blue-900">
+                      <div className="col-span-5">Ingrediente</div>
+                      <div className="col-span-1 text-center">Cant.</div>
+                      <div className="col-span-1 text-center">Unidad</div>
+                      <div className="col-span-2 text-right">Costo Unit.</div>
+                      <div className="col-span-3 text-right">Costo Total</div>
+                    </div>
+                  </div>
+                  
+                  {/* Body */}
+                  <div className="divide-y divide-gray-100">
+                    {ingredientesRecetaFormulario.map((ingrediente: any, index: number) => (
+                      <div key={index} className="px-4 py-3 hover:bg-gray-50 transition-colors">
+                        <div className="grid grid-cols-12 gap-3 items-center">
+                          <div className="col-span-5">
+                            <div className="font-medium text-gray-900 text-sm truncate">
+                              {ingrediente.producto_nombre || `Producto no encontrado (ID: ${ingrediente.id_producto})`}
+                            </div>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="inline-flex items-center justify-center w-8 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded-full">
+                              {ingrediente.cantidad}
+                            </span>
+                          </div>
+                          <div className="col-span-1 text-center">
+                            <span className="text-xs text-gray-600 font-medium">
+                              {medidas.find(m => m.id === ingrediente.id_medida)?.abreviatura || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="col-span-2 text-right">
+                            <span className="text-xs text-gray-700">
+                              {formatCurrency(ingrediente.costo || 0)}
+                            </span>
+                          </div>
+                          <div className="col-span-3 text-right">
+                            <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-100 text-green-800 text-xs font-semibold">
+                              {formatCurrency(ingrediente.cantidad * (ingrediente.costo || 0))}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
