@@ -43,7 +43,7 @@ const menuItems = [
       { title: "Medidas", path: "/medidas", icon: <Ruler className="h-4 w-4" /> },
         { title: "Tipos", path: "/tipos", icon: <Tag className="h-4 w-4" /> },
         { title: "Presentación Medidas", path: "/presentacion-medidas", icon: <Ruler className="h-4 w-4" /> },
-      { title: "Productos", path: "/productos", icon: <Box className="h-4 w-4" /> },
+      { title: "Productos/Recetas", path: "/productos", icon: <Box className="h-4 w-4" /> },
     ],
   },
   {

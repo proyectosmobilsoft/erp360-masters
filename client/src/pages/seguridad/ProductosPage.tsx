@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,6 +26,8 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useLoading } from '@/contexts/LoadingContext';
 import { Can } from '@/contexts/PermissionsContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { ModernTimePicker } from '@/components/ui/modern-time-picker';
 import {
   Package,
   Plus,
@@ -33,13 +38,15 @@ import {
   Save,
   RefreshCw,
   CheckCircle,
-  Trash2
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
-import { productosService, ProductoData, ProductoForm, CategoriaData } from '@/services/productosService';
+import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
 import { SublineaData as SublineaDataFull } from '@/services/sublineasService';
 import { lineasService, LineaData } from '@/services/lineasService';
 import { tiposService, TipoData } from '@/services/tiposService';
+import { claseServiciosService, ClaseServicioData } from '@/services/claseServiciosService';
 import { interfazContableService, InterfazContableData } from '@/services/interfazContableService';
 import { presentacionMedidasService, PresentacionMedidaData } from '@/services/presentacionMedidasService';
 import { productosUnidadesService, ProductoUnidadData } from '@/services/productosUnidadesService';
@@ -181,7 +188,18 @@ interface ProductoFormComponentProps {
   tipos: TipoData[];
   interfacesContables: InterfazContableData[];
   presentacionesMedidas: PresentacionMedidaData[];
-  onSubmit: (data: ProductoForm) => void;
+  productos: ProductoData[];
+  claseServicios: ClaseServicioData[];
+  esReceta: boolean;
+  user: any; // Usuario autenticado
+  tiempoPreparacion: string;
+  utilidadesProducto: UtilidadProducto;
+  unidadTiempoPreparacion: number;
+  medidasPrincipales: any[];
+  onTiempoPreparacionChange: (value: string) => void;
+  onUtilidadesProductoChange: (value: UtilidadProducto) => void;
+  onUnidadTiempoPreparacionChange: (value: number) => void;
+  onSubmit: (data: ProductoForm & { tiempoPreparacion?: string; utilidadesProducto?: UtilidadProducto }) => void;
   isLoading: boolean;
   onCancel: () => void;
 }
@@ -196,6 +214,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   tipos,
   interfacesContables,
   presentacionesMedidas,
+  productos,
+  claseServicios,
+  esReceta,
+  user,
+  tiempoPreparacion,
+  utilidadesProducto,
+  unidadTiempoPreparacion,
+  medidasPrincipales,
+  onTiempoPreparacionChange,
+  onUtilidadesProductoChange,
+  onUnidadTiempoPreparacionChange,
   onSubmit,
   isLoading,
   onCancel
@@ -213,7 +242,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     id_color: producto?.id_color || undefined,
     referencia: producto?.referencia || "",
     id_clase_servicio: producto?.id_clase_servicio || undefined,
-    tipo_menu: producto?.tipo_menu || 0,
+    tipo_menu: producto?.tipo_menu || "",
     no_ciclo: producto?.no_ciclo || 0,
     id_tipo_zona: producto?.id_tipo_zona || undefined,
     ultimo_costo: producto?.ultimo_costo || 0,
@@ -224,12 +253,400 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     imgbase64: producto?.imgbase64 || "",
   });
 
+  // Actualizar formData cuando cambie el producto (para edición)
+  React.useEffect(() => {
+    console.log('🚀 useEffect de producto ejecutándose, producto:', producto);
+    if (producto) {
+      console.log('📝 Valores del producto:');
+      console.log('  - tipo_menu:', producto.tipo_menu);
+      
+      setFormData(prev => {
+        console.log('🔄 formData anterior:', prev);
+        const newFormData = {
+          ...prev,
+          codigo: producto.codigo || "",
+          nombre: producto.nombre || "",
+          id_medida: producto.id_medida || 0,
+          id_tipo_producto: producto.id_tipo_producto || 0,
+          id_categoria: producto.id_categoria || 0,
+          id_sublineas: producto.id_sublineas || 0,
+          id_interfaz_contable: producto.id_interfaz_contable || undefined,
+          id_marca: producto.id_marca || undefined,
+          id_color: producto.id_color || undefined,
+          referencia: producto.referencia || "",
+          id_clase_servicio: producto.id_clase_servicio || undefined,
+          tipo_menu: producto.tipo_menu || "",
+          no_ciclo: producto.no_ciclo || 0,
+          id_tipo_zona: producto.id_tipo_zona || undefined,
+          ultimo_costo: producto.ultimo_costo || 0,
+          id_proveedor: producto.id_proveedor || undefined,
+          frecuencia: producto.frecuencia?.toString() || "semanal",
+          controla_existencia: producto.controla_existencia || 0,
+          controla_lotes: producto.controla_lotes || 0,
+          imgbase64: producto.imgbase64 || "",
+        };
+        console.log('✅ Nuevo formData:', newFormData);
+        return newFormData;
+      });
+    }
+  }, [producto]);
+
+  // Debug: mostrar formData cuando cambie
+  React.useEffect(() => {
+    console.log('🎯 formData actualizado:');
+    console.log('  - tipo_menu:', formData.tipo_menu);
+  }, [formData.tipo_menu]);
+
   // Estados para manejar las dependencias
   const [lineasFiltradas, setLineasFiltradas] = useState<LineaData[]>([]);
   const [sublineasFiltradas, setSublineasFiltradas] = useState<SublineaDataFull[]>([]);
+  const [activeFormTab, setActiveFormTab] = useState<string>("precio");
+
+  // Estados para ingredientes
+  const [ingredienteForm, setIngredienteForm] = useState({
+    id_producto: 0,
+    cantidad: 1,
+    unidad: "",
+    costo_unitario: 0,
+    total: 0,
+    es_receta: false
+  });
+  const [ingredientes, setIngredientes] = useState<any[]>([]);
+  const [totalIngredientes, setTotalIngredientes] = useState(0);
+  const [totalPorciones, setTotalPorciones] = useState(0);
+  
+  
+  // Refs para mantener referencias a los valores actuales
+  const tiempoPreparacionRef = React.useRef<string>("00:00:00");
+  const utilidadesProductoRef = React.useRef<UtilidadProducto>({
+    id_producto: 0,
+    id_indicie_dificultad: 1,
+    tasa_perdida: 0.00000,
+    tasa_utilidad: 0.00000,
+    tiempo_preparacion: "00:00:00",
+    nota: "",
+    estado: 1
+  });
+  
+  // Actualizar refs cuando cambien los valores
+  React.useEffect(() => {
+    tiempoPreparacionRef.current = tiempoPreparacion;
+    console.log('🔄 tiempoPreparacion actualizado:', tiempoPreparacion);
+  }, [tiempoPreparacion]);
+  
+  React.useEffect(() => {
+    utilidadesProductoRef.current = utilidadesProducto;
+    console.log('🔄 utilidadesProducto actualizado:', utilidadesProducto);
+  }, [utilidadesProducto]);
+  
+  
+  // Funciones para convertir entre formato de tiempo y minutos
+  const minutosATiempo = (minutos: number): string => {
+    const horas = Math.floor(minutos / 60);
+    const mins = minutos % 60;
+    const segundos = 0; // Esta función es para convertir minutos a tiempo, no para preservar segundos
+    return `${horas.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+  };
+  
+  const tiempoAMinutos = (tiempo: string): number => {
+    const [horas, minutos] = tiempo.split(':').map(Number);
+    return horas * 60 + minutos;
+  };
+  
+  
+  // Función para formatear tiempo correctamente
+  const formatearTiempo = (tiempo: string): string => {
+    if (!tiempo) return "00:00:00";
+    
+    const partes = tiempo.split(':');
+    if (partes.length === 2) {
+      // Si solo tiene horas y minutos, agregar segundos
+      return tiempo + ':00';
+    } else if (partes.length === 3) {
+      // Si ya tiene segundos, asegurar que esté en formato correcto
+      const [horas, minutos, segundos] = partes;
+      return `${horas.padStart(2, '0')}:${minutos.padStart(2, '0')}:${segundos.padStart(2, '0')}`;
+    }
+    return tiempo;
+  };
+
+  // Función para manejar cambios en el tiempo (ya no se usa con TimePicker)
+  // const handleTiempoChange = (tiempo: string | null) => {
+  //   if (tiempo) {
+  //     const tiempoFormateado = formatearTiempo(tiempo);
+  //     
+  //     console.log('🕐 Tiempo cambiado:', { original: tiempo, formateado: tiempoFormateado });
+  //     
+  //     onTiempoPreparacionChange(tiempoFormateado);
+  //     onUtilidadesProductoChange({
+  //       ...utilidadesProducto,
+  //       tiempo_preparacion: tiempoFormateado
+  //     });
+  //   }
+  // };
+  
+  // Función para guardar utilidades con valores actuales
+  const saveUtilidadesWithCurrentValues = async (idProducto: number) => {
+    try {
+      const tiempoActual = tiempoPreparacionRef.current;
+      const notaActual = utilidadesProductoRef.current.nota;
+      
+      console.log('🔍 Valores capturados para utilidades:', {
+        tiempoPreparacion: tiempoActual,
+        nota: notaActual,
+        esReceta: esReceta
+      });
+      
+      await productosService.saveOrUpdateProductoUtilidades(idProducto, {
+        id_producto: idProducto,
+        id_indicie_dificultad: 1,
+        tasa_perdida: 0.00000,
+        tasa_utilidad: 0.00000,
+        tiempo_preparacion: tiempoActual,
+        nota: notaActual,
+        estado: 1
+      });
+      
+      console.log('✅ Utilidades guardadas correctamente:', {
+        id_producto: idProducto,
+        tiempo_preparacion: tiempoActual,
+        nota: notaActual
+      });
+    } catch (error) {
+      console.error('Error al guardar utilidades:', error);
+    }
+  };
+  const [openProductoSelect, setOpenProductoSelect] = useState(false);
+  const [medidasFiltradas, setMedidasFiltradas] = useState<MedidaData[]>([]);
+  const [costoInputValue, setCostoInputValue] = useState("");
 
   const [nextCodigo, setNextCodigo] = useState<string>("");
+  const [codigoGenerado, setCodigoGenerado] = useState<string>("");
 
+  // Función para truncar texto
+  const truncateText = (text: string, maxLength: number = 50): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+  };
+
+  // Función para calcular costo de ingredientes de receta
+  const calcularCostoReceta = async (idProducto: number): Promise<number> => {
+    try {
+      console.log('🍳 Calculando costo total de ingredientes de la receta...');
+      const ingredientesReceta = await productosService.getProductoIngredientes(idProducto);
+      console.log('📋 Ingredientes de la receta:', ingredientesReceta);
+      
+      // Calcular costo total de los ingredientes
+      const costoTotalIngredientes = ingredientesReceta.reduce((total, ingrediente) => {
+        const costoIngrediente = ingrediente.cantidad * (ingrediente.costo || 0);
+        console.log(`💰 Ingrediente: ${ingrediente.cantidad} x ${ingrediente.costo} = ${costoIngrediente}`);
+        return total + costoIngrediente;
+      }, 0);
+      
+      console.log('💰 Costo total de ingredientes:', costoTotalIngredientes);
+      return costoTotalIngredientes;
+    } catch (error) {
+      console.error('❌ Error al obtener ingredientes de la receta:', error);
+      return 0;
+    }
+  };
+
+  // Funciones para manejar ingredientes
+  const handleIngredienteChange = async (field: string, value: any) => {
+    // Si se selecciona un producto, manejar lógica async primero
+    if (field === 'id_producto') {
+      const productoSeleccionado = productos.find(p => p.id === parseInt(value));
+      if (productoSeleccionado) {
+        // Verificar si el producto es una receta (tiene id_clase_servicio)
+        const esReceta = productoSeleccionado.id_clase_servicio && productoSeleccionado.id_clase_servicio > 0;
+        
+        let costoCalculado = productoSeleccionado.ultimo_costo || 0;
+        
+        // Si es receta, calcular costo total de ingredientes
+        if (esReceta) {
+          costoCalculado = await calcularCostoReceta(productoSeleccionado.id);
+          if (costoCalculado === 0) {
+            // Si hay error, usar el costo normal del producto
+            costoCalculado = productoSeleccionado.ultimo_costo || 0;
+          }
+        }
+        
+        // Ahora actualizar el estado con toda la información
+        setIngredienteForm(prev => {
+          const newForm = { ...prev, [field]: value };
+          
+          newForm.costo_unitario = costoCalculado;
+          setCostoInputValue(costoCalculado > 0 ? costoCalculado.toString() : '0.00');
+          
+          // IMPORTANTE: Limpiar el campo unidad al seleccionar un nuevo producto
+          console.log('🧹 Limpiando campo unidad al seleccionar nuevo producto');
+          newForm.unidad = "";
+          
+          if (esReceta) {
+            // Si es receta: cantidad = 1, unidad = unidad del producto, campos deshabilitados
+            newForm.cantidad = 1;
+            newForm.es_receta = true; // Flag para deshabilitar campos
+            
+            // IMPORTANTE: Para recetas, RESETEAR y cargar TODAS las medidas para asegurar que la unidad correcta esté disponible
+            console.log('🔄 Reseteando medidasFiltradas para receta');
+            const todasLasMedidas = medidas.filter(m => m.estado === 1);
+            setMedidasFiltradas(todasLasMedidas);
+            
+            // Buscar la medida del producto receta
+            const medidaProductoReceta = medidas.find(m => m.id === productoSeleccionado.id_medida);
+            const unidadReceta = medidaProductoReceta?.abreviatura || "";
+            newForm.unidad = unidadReceta;
+            
+            console.log('🍳 Producto es receta, cargando TODAS las medidas:', {
+              productoReceta: productoSeleccionado.nombre,
+              id_medida_producto: productoSeleccionado.id_medida,
+              medidaProductoReceta,
+              unidadSeleccionada: unidadReceta,
+              todasLasMedidas: todasLasMedidas.length,
+              medidas: todasLasMedidas,
+              medidasFiltradasAnteriores: medidasFiltradas.length,
+              costoTotalIngredientes: newForm.costo_unitario,
+              newForm: {
+                cantidad: newForm.cantidad,
+                unidad: newForm.unidad,
+                es_receta: newForm.es_receta,
+                costo_unitario: newForm.costo_unitario
+              }
+            });
+          } else {
+            // Si no es receta: comportamiento normal (lógica original)
+            newForm.es_receta = false;
+            
+            // Filtrar medidas por la clase de medida del producto seleccionado
+            const medidaProducto = medidas.find(m => m.id === productoSeleccionado.id_medida);
+            
+            if (medidaProducto && medidaProducto.clase_medida) {
+              // Filtrar medidas que tengan la misma clase_medida
+              const medidasFiltradas = medidas.filter(m => 
+                m.clase_medida === medidaProducto.clase_medida && m.estado === 1
+              );
+              console.log('🔍 Filtrando medidas por clase:', {
+                medidaProducto,
+                clase_medida: medidaProducto.clase_medida,
+                medidasFiltradas,
+                totalMedidas: medidas.length
+              });
+              setMedidasFiltradas(medidasFiltradas);
+            } else {
+              // Si no hay clase de medida, mostrar todas las medidas activas
+              console.log('⚠️ No hay clase_medida, mostrando todas las medidas:', {
+                medidaProducto,
+                medidasActivas: medidas.filter(m => m.estado === 1).length
+              });
+              setMedidasFiltradas(medidas.filter(m => m.estado === 1));
+            }
+          }
+          
+          // Calcular total inmediatamente al seleccionar producto
+          newForm.total = newForm.cantidad * newForm.costo_unitario;
+          return newForm;
+        });
+        
+        return; // Salir temprano para evitar el setState duplicado
+      }
+    }
+    
+    // Para otros campos, usar lógica normal
+    setIngredienteForm(prev => {
+      const newForm = { ...prev, [field]: value };
+      
+      // Calcular total automáticamente
+      if (field === 'cantidad' || field === 'costo_unitario') {
+        newForm.total = newForm.cantidad * newForm.costo_unitario;
+      }
+      
+      return newForm;
+    });
+  };
+
+
+  // Función para manejar el cambio del input de costo (igual que último costo)
+  const handleCostoInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+
+    // Si el campo está vacío, mostrar 0.00
+    if (inputValue === '') {
+      setCostoInputValue('0.00');
+      setIngredienteForm(prev => {
+        const newForm = { ...prev, costo_unitario: 0 };
+        newForm.total = newForm.cantidad * newForm.costo_unitario;
+        return newForm;
+      });
+      return;
+    }
+
+    // Limpiar el valor, permitir solo números y punto
+    let cleanValue = inputValue.replace(/[^0-9.]/g, '');
+
+    // Asegurar que solo haya un punto decimal
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+
+    // Formatear en tiempo real
+    const formatted = formatCurrencyDisplay(cleanValue);
+    setCostoInputValue(formatted);
+
+    // Convertir a número y actualizar el estado
+    const numericValue = parseFloat(cleanValue) || 0;
+    setIngredienteForm(prev => {
+      const newForm = { ...prev, costo_unitario: numericValue };
+      newForm.total = newForm.cantidad * newForm.costo_unitario;
+      return newForm;
+    });
+  };
+
+  const handleCostoInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
+  const handleCostoInputBlur = () => {
+    const formatted = formatOnBlur(costoInputValue);
+    setCostoInputValue(formatted);
+  };
+
+  const handleAgregarIngrediente = () => {
+    if (ingredienteForm.id_producto && ingredienteForm.cantidad > 0 && ingredienteForm.unidad) {
+      const nuevoIngrediente = {
+        id: Date.now(), // ID temporal
+        ...ingredienteForm,
+        nombre_producto: productos.find(p => p.id === ingredienteForm.id_producto)?.nombre || 'Producto'
+      };
+      
+      setIngredientes(prev => [...prev, nuevoIngrediente]);
+      
+      // Actualizar totales
+      const nuevoTotal = totalIngredientes + nuevoIngrediente.total;
+      setTotalIngredientes(nuevoTotal);
+      setTotalPorciones(nuevoTotal); // Por ahora igual al total de ingredientes
+      
+      // Limpiar formulario
+      setIngredienteForm({
+        id_producto: 0,
+        cantidad: 1,
+        unidad: "",
+        costo_unitario: 0,
+        total: 0,
+        es_receta: false
+      });
+      setCostoInputValue("0.00");
+    }
+  };
+
+  const handleEliminarIngrediente = (id: number) => {
+    const ingredienteAEliminar = ingredientes.find(i => i.id === id);
+    if (ingredienteAEliminar) {
+      setIngredientes(prev => prev.filter(i => i.id !== id));
+      setTotalIngredientes(prev => prev - ingredienteAEliminar.total);
+      setTotalPorciones(prev => prev - ingredienteAEliminar.total);
+    }
+  };
 
   // Obtener el siguiente código disponible cuando se crea un nuevo producto
   React.useEffect(() => {
@@ -246,6 +663,77 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         });
     }
   }, [editingProducto]);
+
+  // Inicializar medidas filtradas cuando se cargan las medidas
+  React.useEffect(() => {
+    if (medidas.length > 0) {
+      setMedidasFiltradas(medidas.filter(m => m.estado === 1));
+    }
+  }, [medidas]);
+
+  // Detectar si la categoría seleccionada es receta
+  React.useEffect(() => {
+    if (formData.id_categoria && categorias.length > 0) {
+      const categoriaSeleccionada = categorias.find(cat => cat.id === formData.id_categoria);
+      const nuevaEsReceta = categoriaSeleccionada?.isreceta === 1;
+      
+      // Cambiar el tab activo según si es receta o no
+      if (nuevaEsReceta) {
+        setActiveFormTab("ingredientes");
+      } else {
+        setActiveFormTab("precio");
+      }
+
+      // Limpiar valores de los tabs al cambiar categoría
+      setIngredientes([]);
+      setTotalIngredientes(0);
+      setTotalPorciones(0);
+      setIngredienteForm({
+        id_producto: 0,
+        cantidad: 1,
+        unidad: "",
+        costo_unitario: 0,
+        total: 0,
+        es_receta: false
+      });
+      setCostoInputValue("0.00");
+      // Solo resetear tiempo y tipo_menu si NO estamos editando
+      if (!editingProducto) {
+        console.log('🔄 Reseteando campos porque NO estamos editando');
+        setFormData(prev => ({ 
+          ...prev, 
+          tiempo: 0, // Reset tiempo de preparación
+          tipo_menu: "" // Reset tipo de menú
+        }));
+      } else {
+        console.log('✅ NO reseteando campos porque estamos editando');
+      }
+    } else {
+      setActiveFormTab("precio");
+    }
+  }, [formData.id_categoria, categorias]);
+
+  // Notificar al componente padre cuando cambie esReceta
+  React.useEffect(() => {
+    if (formData.id_categoria && categorias.length > 0) {
+      const categoriaSeleccionada = categorias.find(cat => cat.id === formData.id_categoria);
+      const nuevaEsReceta = categoriaSeleccionada?.isreceta === 1;
+      
+      console.log('🔍 Categoría cambiada:', {
+        id_categoria: formData.id_categoria,
+        categoria: categoriaSeleccionada?.nombre,
+        isreceta: categoriaSeleccionada?.isreceta,
+        nuevaEsReceta
+      });
+      
+      // Notificar al componente padre sobre el cambio
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('categoriaChanged', { 
+          detail: { esReceta: nuevaEsReceta } 
+        }));
+      }
+    }
+  }, [formData.id_categoria, categorias]);
 
   // Reiniciar formulario cuando cambie editingProducto
   React.useEffect(() => {
@@ -279,7 +767,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       // Obtener la línea directamente de la sublínea del producto
       const idLinea = editingProducto.inv_sublineas?.id_linea || 0;
       const idCategoria = editingProducto.id_categoria || 0;
-      
+
       // Inicializar formData con los valores correctos
       setFormData({
         id: editingProducto.id || 0,
@@ -298,7 +786,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_proveedor: editingProducto.id_proveedor || undefined,
         referencia: editingProducto.referencia || "",
         ultimo_costo: editingProducto.ultimo_costo || 0,
-        frecuencia: editingProducto.frecuencia?.toString() || "semanal",
+        frecuencia: esReceta ? "" : (editingProducto.frecuencia?.toString() || "semanal"),
         controla_existencia: editingProducto.controla_existencia || 0,
         controla_lotes: editingProducto.controla_lotes || 0,
         imgbase64: editingProducto.imgbase64 || "",
@@ -330,7 +818,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
             ...prev,
             id_linea: idLinea,
             id_categoria: idCategoria,
-            id_sublineas: editingProducto.id_sublineas || 0
+            id_sublineas: editingProducto.id_sublineas || 0,
+            // Preservar tipo_menu y tiempo al editar
+            tipo_menu: editingProducto.tipo_menu || prev.tipo_menu,
           }));
         }, 100);
       }
@@ -345,11 +835,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
       // Solo resetear línea y sublínea si NO estamos editando
       if (!editingProducto) {
-        setFormData(prev => ({
-          ...prev,
-          id_linea: 0,
-          id_sublineas: 0
-        }));
+      setFormData(prev => ({
+        ...prev,
+        id_linea: 0,
+        id_sublineas: 0
+      }));
       }
     } else if (!editingProducto) {
       setLineasFiltradas([]);
@@ -376,8 +866,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   // Filtrar sublíneas cuando cambie la línea (solo en modo creación)
   React.useEffect(() => {
     if (!editingProducto && formData.id_linea && formData.id_linea > 0 && sublineas.length > 0) {
-      const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
-      setSublineasFiltradas(sublineasDeLinea);
+        const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
+        setSublineasFiltradas(sublineasDeLinea);
 
       // Resetear sublínea cuando cambie la línea en modo creación con timeout
       setTimeout(() => {
@@ -387,30 +877,226 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         }));
       }, 50);
     } else if (!editingProducto) {
-      setSublineasFiltradas([]);
+        setSublineasFiltradas([]);
     }
   }, [formData.id_linea, sublineas, editingProducto]);
+
+  // Generar código automáticamente cuando se seleccione una sublínea
+  React.useEffect(() => {
+    if (!editingProducto && formData.id_linea && formData.id_sublineas && formData.id_sublineas > 0) {
+      generarCodigoProducto(formData.id_linea, formData.id_sublineas).then(codigo => {
+        if (codigo) {
+          setCodigoGenerado(codigo);
+          setFormData(prev => ({ ...prev, codigo }));
+        }
+      });
+    } else if (!editingProducto) {
+      setCodigoGenerado("");
+    }
+  }, [formData.id_linea, formData.id_sublineas, editingProducto]);
+
+  // Cargar ingredientes existentes cuando se edita un producto
+  React.useEffect(() => {
+    if (editingProducto && editingProducto.id) {
+      productosService.getProductoIngredientes(editingProducto.id)
+        .then(ingredientesExistentes => {
+          const ingredientesFormateados = ingredientesExistentes.map(ing => ({
+            id: ing.id,
+            id_producto: ing.id_producto,
+            cantidad: ing.cantidad,
+            unidad: medidas.find(m => m.id === ing.id_medida)?.abreviatura || '',
+            costo_unitario: ing.costo || 0,
+            total: ing.cantidad * (ing.costo || 0),
+            nombre_producto: productos.find(p => p.id === ing.id_producto)?.nombre || 'Producto'
+          }));
+          
+          setIngredientes(ingredientesFormateados);
+          
+          // Recalcular totales
+          const totalIng = ingredientesFormateados.reduce((sum, ing) => sum + ing.total, 0);
+          setTotalIngredientes(totalIng);
+          setTotalPorciones(totalIng);
+        })
+        .catch(error => {
+          console.error('Error cargando ingredientes:', error);
+        });
+        
+      // Cargar utilidades existentes
+      productosService.getProductoUtilidades(editingProducto.id)
+        .then(utilidadesExistentes => {
+          if (utilidadesExistentes.length > 0) {
+            const utilidad = utilidadesExistentes[0];
+            onUtilidadesProductoChange(utilidad);
+            onTiempoPreparacionChange(utilidad.tiempo_preparacion);
+          }
+        })
+        .catch(error => {
+          console.error('Error cargando utilidades:', error);
+        });
+    } else {
+      // Limpiar ingredientes en modo creación
+      setIngredientes([]);
+      setTotalIngredientes(0);
+      setTotalPorciones(0);
+      
+      // Limpiar utilidades en modo creación
+      onUtilidadesProductoChange({
+        id_producto: 0,
+        id_indicie_dificultad: 1,
+        tasa_perdida: 0.00000,
+        tasa_utilidad: 0.00000,
+        tiempo_preparacion: "00:00:00",
+        nota: "",
+        estado: 1
+      });
+      onTiempoPreparacionChange("00:00:00");
+    }
+  }, [editingProducto, medidas, productos]);
+
+
+  const validateForm = () => {
+    const errors: string[] = [];
+
+    // Validaciones básicas
+    if (!formData.nombre.trim()) {
+      errors.push("El nombre es obligatorio");
+    }
+    if (!formData.codigo || formData.codigo.trim() === "") {
+      errors.push("El código es obligatorio");
+    }
+    if (!formData.id_categoria || formData.id_categoria === 0) {
+      errors.push("La categoría es obligatoria");
+    }
+    if (!formData.id_linea || formData.id_linea === 0) {
+      errors.push("La línea es obligatoria");
+    }
+    if (!formData.id_sublineas || formData.id_sublineas === 0) {
+      errors.push("La sublínea es obligatoria");
+    }
+    if (!formData.id_tipo_producto || formData.id_tipo_producto === 0) {
+      errors.push("El tipo de producto es obligatorio");
+    }
+
+    // Validaciones específicas para recetas
+    if (esReceta) {
+      if (!formData.id_clase_servicio || formData.id_clase_servicio === 0) {
+        errors.push("El servicio es obligatorio para recetas");
+      }
+      if (!formData.tipo_menu || formData.tipo_menu === "") {
+        errors.push("El tipo de menú es obligatorio para recetas");
+      }
+    }
+
+    // Validación adicional: verificar que la medida existe en la base de datos (solo si se seleccionó una)
+    if (formData.id_medida && formData.id_medida > 0) {
+      const medidaExiste = medidas.some(m => m.id === formData.id_medida);
+      if (!medidaExiste) {
+        errors.push("La unidad seleccionada no es válida");
+      }
+    }
+
+    return errors;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar formulario
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      alert("Por favor corrija los siguientes errores:\n" + validationErrors.join("\n"));
+      return;
+    }
+
     // Convertir empaques al formato esperado por el servicio
-    const empaquesData = empaques.map(empaque => ({
-      id_presentacion: presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id || 0,
-      factor: parseFloat(empaque.factor) || 0,
+    // Solo procesar empaques si hay alguno
+    const empaquesData = empaques.length > 0 ? empaques
+      .filter(empaque => {
+        // Filtrar empaques válidos
+        if (!empaque.tipo || empaque.tipo.trim() === '') {
+          return false;
+        }
+        if (!empaque.factor || empaque.factor.trim() === '') {
+          return false;
+        }
+        
+        const presentacionId = presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id;
+        if (!presentacionId) {
+          console.warn(`No se encontró presentación para tipo: ${empaque.tipo}`);
+          return false;
+        }
+        return true;
+      })
+      .map(empaque => ({
+        id_presentacion: presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id!,
+        factor: parseFloat(empaque.factor),
       descripcion: empaque.descripcion
-    }));
+      })) : [];
+
+    // Convertir ingredientes al formato esperado por el servicio
+    // Solo procesar ingredientes si hay alguno y si es una receta
+    const ingredientesData = esReceta ? ingredientes
+      .filter(ingrediente => {
+        // Filtrar ingredientes válidos
+        if (!ingrediente.id_producto || ingrediente.id_producto === 0) {
+          return false;
+        }
+        if (!ingrediente.unidad || ingrediente.unidad.trim() === '') {
+          return false;
+        }
+        if (!ingrediente.cantidad || ingrediente.cantidad <= 0) {
+          return false;
+        }
+        
+        const medidaId = medidas.find(m => m.abreviatura === ingrediente.unidad)?.id;
+        if (!medidaId) {
+          console.warn(`No se encontró medida para unidad: ${ingrediente.unidad}`);
+          return false;
+        }
+        return true;
+      })
+      .map(ingrediente => ({
+        id_producto: ingrediente.id_producto,
+        id_medida: medidas.find(m => m.abreviatura === ingrediente.unidad)?.id!,
+        cantidad: ingrediente.cantidad,
+        costo: ingrediente.costo_unitario,
+        estado: 1
+      })) : [];
 
     // Filtrar campos que no existen en la tabla de productos
     const { id_linea, ...productoData } = formData;
 
-    // Incluir empaques en los datos del producto
-    const dataWithEmpaques = {
+    // Convertir id_medida = 0 a null para permitir productos sin medida
+    const productoDataFinal = {
       ...productoData,
-      empaques: empaquesData
+      id_medida: productoData.id_medida === 0 ? null : productoData.id_medida
     };
 
-    onSubmit(dataWithEmpaques);
+    // Incluir empaques e ingredientes en los datos del producto
+    const dataWithEmpaques = {
+      ...productoDataFinal,
+      id_usuario: user?.id, // Agregar ID del usuario autenticado
+      empaques: empaquesData,
+      ingredientes: ingredientesData
+    };
+
+    // Debug: mostrar datos que se van a enviar
+    console.log('📦 Datos a enviar:', {
+      id_medida: dataWithEmpaques.id_medida,
+      id_usuario: dataWithEmpaques.id_usuario,
+      es_receta: esReceta,
+      ingredientes_count: ingredientesData.length,
+      empaques_count: empaquesData.length,
+      ingredientes: ingredientesData,
+      empaques: empaquesData,
+      nombre: dataWithEmpaques.nombre
+    });
+
+    onSubmit({
+      ...dataWithEmpaques,
+      tiempoPreparacion,
+      utilidadesProducto
+    });
   };
 
   const handleInputChange = (field: keyof ProductoForm, value: string | number) => {
@@ -427,20 +1113,44 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
       // Solo resetear en modo creación, no en edición
       if (!editingProducto) {
-        // Si cambia la categoría, resetear línea y sublínea
-        if (field === 'id_categoria') {
-          newData.id_linea = undefined;
-          newData.id_sublineas = 0;
-        }
+      // Si cambia la categoría, resetear línea y sublínea
+      if (field === 'id_categoria') {
+        newData.id_linea = undefined;
+        newData.id_sublineas = 0;
+          setCodigoGenerado(""); // Limpiar código generado
+      }
 
-        // Si cambia la línea, resetear sublínea
-        if (field === 'id_linea') {
-          newData.id_sublineas = 0;
+      // Si cambia la línea, resetear sublínea
+      if (field === 'id_linea') {
+        newData.id_sublineas = 0;
+          setCodigoGenerado(""); // Limpiar código generado
         }
       }
 
       return newData;
     });
+  };
+
+  // Función para generar código automáticamente
+  const generarCodigoProducto = async (idLinea: number, idSublinea: number) => {
+    try {
+      // Obtener códigos de línea y sublínea
+      const linea = lineas.find(l => l.id === idLinea);
+      const sublinea = sublineas.find(s => s.id === idSublinea);
+      
+      if (!linea || !sublinea) {
+        return "";
+      }
+
+      // Obtener el siguiente consecutivo para esta combinación
+      const consecutivo = await productosService.getConsecutivoProducto(linea.codigo, sublinea.codigo);
+      const codigoGenerado = `${linea.codigo}${sublinea.codigo}${consecutivo.toString().padStart(3, '0')}`;
+      
+      return codigoGenerado;
+    } catch (error) {
+      console.error('Error generando código:', error);
+      return "";
+    }
   };
 
   // Funciones para manejar empaques
@@ -481,8 +1191,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       if (medida && medida.abreviatura) {
         const descripcion = `${tipo} X ${factor}${medida.abreviatura}`;
         setEmpaqueForm(prev => ({
-          ...prev,
-          descripcion
+            ...prev,
+            descripcion
         }));
       }
     }
@@ -551,6 +1261,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     );
   }, [presentacionesMedidas, formData.id_medida]);
 
+  // Filtrar tipos de producto según si es receta o no
+  const tiposFiltrados = useMemo(() => {
+    return tipos.filter(tipo => {
+      if (esReceta) {
+        return tipo.es_receta === true;
+      } else {
+        return tipo.es_receta === false;
+      }
+    });
+  }, [tipos, esReceta]);
+
   // Limpiar formulario de empaques cuando cambie la unidad
   React.useEffect(() => {
     setEmpaqueForm({ tipo: '', factor: '', descripcion: '' });
@@ -579,6 +1300,20 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       setEmpaques([]);
     }
   }, [editingProducto]);
+
+  // Sincronizar unidadTiempoPreparacion con formData.id_medida cuando es receta
+  React.useEffect(() => {
+    if (esReceta && unidadTiempoPreparacion > 0) {
+      handleInputChange('id_medida', unidadTiempoPreparacion);
+    }
+  }, [esReceta, unidadTiempoPreparacion]);
+
+  // Cargar unidadTiempoPreparacion desde formData.id_medida cuando se edita una receta
+  React.useEffect(() => {
+    if (esReceta && editingProducto && formData.id_medida && formData.id_medida > 0) {
+      onUnidadTiempoPreparacionChange(formData.id_medida);
+    }
+  }, [esReceta, editingProducto, formData.id_medida, onUnidadTiempoPreparacionChange]);
 
   const handleUltimoCostoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
@@ -794,7 +1529,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       <div className="flex items-center gap-2 p-6 border-b bg-gradient-to-r from-cyan-50 to-blue-50">
         <Package className="w-5 h-5 text-cyan-600" />
         <h2 className="text-lg font-semibold text-cyan-800">
-          {editingProducto ? 'Editar Producto' : 'Nuevo Producto'}
+          {editingProducto ? (esReceta ? 'Editar Receta' : 'Editar Producto') : (esReceta ? 'Nueva Receta' : 'Nuevo Producto')}
         </h2>
       </div>
 
@@ -861,7 +1596,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
                       </SelectTrigger>
                       <SelectContent>
-                        {tipos.map((tipo) => (
+                        {tiposFiltrados.map((tipo) => (
                           <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"}>
                             {tipo.nombre}
                           </SelectItem>
@@ -938,7 +1673,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   </div>
                 </div>
 
-                {/* Tercera fila de características */}
+                {/* Tercera fila de características - Solo para productos normales */}
+                {!esReceta && (
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center">
@@ -954,7 +1690,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <SelectContent>
                         {medidas.map((medida) => (
                           <SelectItem key={medida.id} value={medida.id.toString()}>
-                            {medida.nombre}
+                            {medida.abreviatura} - {medida.nombre}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -974,6 +1710,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     />
                   </div>
                 </div>
+                )}
               </div>
 
             </div>
@@ -987,13 +1724,16 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 </div>
                 <Input
                   id="codigo"
-                  value={editingProducto ? formData.codigo : (nextCodigo || "Cargando...")}
+                  value={editingProducto ? formData.codigo : (codigoGenerado || "Seleccione línea y sublínea")}
                   readOnly={true}
                   className="h-8 text-sm bg-red-50 border-red-200 text-red-600 font-bold cursor-default"
                   autoComplete="off"
                 />
               </div>
 
+              {/* IMAGEN y CHECKBOXES - Solo para productos normales */}
+              {!esReceta && (
+                <>
               {/* IMAGEN - más compacto */}
               <div className="space-y-1">
                 <div className="flex items-center">
@@ -1001,8 +1741,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 </div>
                 <div className="h-32">
                   <ImageUpload
-                    value={formData.imgbase64}
-                    onChange={(value) => handleInputChange('imgbase64', value)}
+                        value={formData.imgbase64}
+                        onChange={(value) => handleInputChange('imgbase64', value)}
                   />
                 </div>
               </div>
@@ -1039,19 +1779,150 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   </div>
                 </div>
               </div>
+                </>
+              )}
+
+              {/* CARACTERÍSTICAS DE LA RECETA - Solo para recetas */}
+              {esReceta && (
+                <div className="relative overflow-hidden rounded-lg border border-orange-200 shadow-md">
+                  {/* Imagen de fondo de ingredientes de cocina */}
+                  <div 
+                    className="absolute inset-0 bg-center bg-no-repeat"
+                    style={{
+                      backgroundImage: `url('/src/assets/img/fondo-recetas.jpg')`,
+                      backgroundSize: '45%'
+                    }}
+                  />
+                  <div className="relative z-10 p-3">
+                    {/* Servicio y Menú en una fila */}
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Servicio */}
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Servicio <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.id_clase_servicio?.toString() || ""}
+                          onValueChange={(value) => handleInputChange('id_clase_servicio', parseInt(value))}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue className="text-left" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {claseServicios.map((servicio: ClaseServicioData) => (
+                              <SelectItem key={servicio.id} value={servicio.id.toString()}>
+                                {servicio.nombre}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Menú */}
+                      <div className="space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">
+                          Menú <span className="text-red-500">*</span>
+                        </Label>
+                        <Select
+                          value={formData.tipo_menu || ""}
+                          onValueChange={(value) => {
+                            console.log('🔄 Cambiando tipo_menu a:', value);
+                            handleInputChange('tipo_menu', value);
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-sm">
+                            <SelectValue className="text-left" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Estandar">Estandar</SelectItem>
+                            <SelectItem value="Especial">Especial</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Tiempo de Preparación */}
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-sm font-medium text-gray-700">Tiempo</Label>
+                        <ModernTimePicker
+                          value={tiempoPreparacion}
+                          onChange={(tiempo) => {
+                            const tiempoFormateado = formatearTiempo(tiempo);
+                            onTiempoPreparacionChange(tiempoFormateado);
+                            onUtilidadesProductoChange({
+                              ...utilidadesProducto,
+                              tiempo_preparacion: tiempoFormateado
+                            });
+                          }}
+                          placeholder="Seleccionar tiempo"
+                          className="w-full h-8 text-sm"
+                          format="HH:mm:ss"
+                          allowSeconds={true}
+                        />
+                      </div>
+                      {esReceta && (
+                        <div className="w-32 space-y-1">
+                          <Label className="text-sm font-medium text-gray-700">Unidad</Label>
+                          <Select
+                            value={unidadTiempoPreparacion.toString()}
+                            onValueChange={(value) => onUnidadTiempoPreparacionChange(parseInt(value))}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue placeholder="Unidad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {medidasPrincipales.map((medida) => (
+                                <SelectItem key={medida.id} value={medida.id.toString()}>
+                                  {medida.abreviatura} - {medida.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Tabs de navegación en la parte inferior - más compacto */}
           <div className="border-t pt-3">
-            <Tabs defaultValue="precio" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 bg-cyan-100/60 p-1 rounded-lg">
+            <Tabs value={activeFormTab} onValueChange={setActiveFormTab} className="w-full">
+              <TabsList className={`grid w-full ${esReceta ? 'grid-cols-3' : 'grid-cols-4'} bg-cyan-100/60 p-1 rounded-lg`}>
+                {!esReceta && (
                 <TabsTrigger
                   value="precio"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                 >
                   Precio y Existencias
                 </TabsTrigger>
+                )}
+                {esReceta ? (
+                  <>
+                    <TabsTrigger
+                      value="ingredientes"
+                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                    >
+                      Ingredientes
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="preparacion"
+                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                    >
+                      Preparación
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="unidades-servicio"
+                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                    >
+                      Unidades de Servicio
+                    </TabsTrigger>
+                  </>
+                ) : (
+                  <>
                 <TabsTrigger
                   value="contable"
                   className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
@@ -1070,6 +1941,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 >
                   Empaques Asociados
                 </TabsTrigger>
+                  </>
+                )}
               </TabsList>
 
               <TabsContent value="precio" className="mt-3">
@@ -1116,24 +1989,24 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
-                        </div>
-                        <Input
-                          id="existencia_actual"
-                          type="number"
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
+                      </div>
+                      <Input
+                        id="existencia_actual"
+                        type="number"
                           value="0"
                           className="h-8 text-sm bg-gray-100 text-gray-400"
-                          autoComplete="off"
+                        autoComplete="off"
                           disabled
-                        />
-                      </div>
+                      />
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                      </div>
                         <Select
                           value={formData.frecuencia || "semanal"}
                           onValueChange={(value) => handleInputChange('frecuencia', value)}
@@ -1582,6 +2455,259 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   </div>
                 </div>
               </TabsContent>
+
+              {/* Tabs para recetas */}
+              {esReceta && (
+                <>
+                  <TabsContent value="ingredientes" className="mt-3">
+                    <div className="space-y-4">
+                      {/* Formulario para agregar ingredientes - Diseño actualizado */}
+                      <div className="bg-blue-50 p-2 rounded-lg">
+                        <div className="grid grid-cols-12 gap-3 items-end">
+                          <div className="col-span-4 space-y-1">
+                            <Label className="text-sm font-medium text-gray-700">Nombre del Producto</Label>
+                            <Popover open={openProductoSelect} onOpenChange={setOpenProductoSelect}>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  aria-expanded={openProductoSelect}
+                                  className="h-8 text-sm bg-yellow-50 border-yellow-200 justify-between w-full"
+                                >
+                                  {ingredienteForm.id_producto
+                                    ? truncateText(productos.find((producto) => producto.id === ingredienteForm.id_producto)?.nombre || "")
+                                    : "Seleccionar producto"}
+                                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[600px] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Buscar producto..." />
+                                  <CommandList>
+                                    <CommandEmpty>No se encontraron productos.</CommandEmpty>
+                                    <CommandGroup>
+                                      {productos
+                                        .filter(producto => producto.estado === 1)
+                                        .map((producto) => (
+                                        <CommandItem
+                                          key={producto.id}
+                                          value={producto.nombre}
+                                          onSelect={() => {
+                                            handleIngredienteChange('id_producto', producto.id);
+                                            setOpenProductoSelect(false);
+                                          }}
+                                        >
+                                          {truncateText(producto.nombre, 60)}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <div className="col-span-1 space-y-1">
+                            <Label className="text-sm font-medium text-gray-700">Cantidad</Label>
+                            <Input
+                              type="number"
+                              value={ingredienteForm.cantidad}
+                              onChange={(e) => handleIngredienteChange('cantidad', parseFloat(e.target.value) || 1)}
+                              onFocus={(e) => e.target.select()}
+                              className={`h-8 text-sm ${ingredienteForm.es_receta ? 'bg-gray-100' : 'bg-white'}`}
+                              placeholder="1"
+                              min="0"
+                              step="0.01"
+                              disabled={ingredienteForm.es_receta}
+                            />
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-sm font-medium text-gray-700">Unidad</Label>
+                            <Select
+                              value={ingredienteForm.unidad}
+                              onValueChange={(value) => handleIngredienteChange('unidad', value)}
+                              disabled={ingredienteForm.es_receta}
+                            >
+                              <SelectTrigger className={`h-8 text-sm ${ingredienteForm.es_receta ? 'bg-gray-100' : 'bg-white'}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {medidasFiltradas.length > 0 ? (
+                                  medidasFiltradas.map((medida) => (
+                                    <SelectItem key={medida.id} value={medida.abreviatura}>
+                                      {medida.abreviatura} - {medida.nombre}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <>
+                                    <SelectItem value="kg">Kg</SelectItem>
+                                    <SelectItem value="g">g</SelectItem>
+                                    <SelectItem value="l">L</SelectItem>
+                                    <SelectItem value="ml">ml</SelectItem>
+                                    <SelectItem value="unidad">Unidad</SelectItem>
+                                    <SelectItem value="lb">Lb</SelectItem>
+                                  </>
+                                )}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                              Costo <span className="text-gray-400">?</span>
+                            </Label>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                              <Input
+                                type="text"
+                                value={formatCurrencyDisplay(costoInputValue)}
+                                onChange={handleCostoInputChange}
+                                onFocus={handleCostoInputFocus}
+                                onBlur={handleCostoInputBlur}
+                                className="h-8 text-sm pl-8 bg-white"
+                                placeholder="0.00"
+                                autoComplete="off"
+                              />
+                            </div>
+                          </div>
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-sm font-medium text-gray-700">Total</Label>
+                            <Input
+                              type="text"
+                              value={ingredienteForm.total > 0 ? `$${ingredienteForm.total.toLocaleString()}` : ''}
+                              className="h-8 text-sm bg-white font-medium text-green-600"
+                              placeholder="$0"
+                              readOnly
+                            />
+                          </div>
+                          <div className="col-span-1 flex items-end">
+                            <Button
+                              type="button"
+                              onClick={handleAgregarIngrediente}
+                              className="h-8 w-8 p-0 bg-blue-600 hover:bg-blue-700"
+                              disabled={!ingredienteForm.id_producto || !ingredienteForm.cantidad || !ingredienteForm.unidad}
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tabla de ingredientes - Más compacta */}
+                      <div className="space-y-1 mt-1">
+                        <div className="border border-gray-300 rounded-lg overflow-hidden">
+                          <div className="bg-blue-100 px-3 py-2 text-xs font-medium text-gray-700">
+                            <div className="grid grid-cols-6 gap-3">
+                              <div>Nombre Producto</div>
+                              <div>Cantidad</div>
+                              <div>Unidad</div>
+                              <div>Costo</div>
+                              <div>Total</div>
+                              <div></div>
+                            </div>
+                          </div>
+                          <div className="bg-white">
+                            {ingredientes.length === 0 ? (
+                              <div className="px-3 py-6 text-center text-gray-500 text-xs">
+                                No Rows To Show
+                              </div>
+                            ) : (
+                              ingredientes.map((ingrediente) => (
+                                <div key={ingrediente.id} className="px-3 py-1.5 border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
+                                  <div className="grid grid-cols-6 gap-3 items-center">
+                                    <div className="text-xs font-medium text-gray-900 truncate">{ingrediente.nombre_producto}</div>
+                                    <div className="text-xs text-gray-700">{ingrediente.cantidad}</div>
+                                    <div className="text-xs text-gray-700">{ingrediente.unidad}</div>
+                                    <div className="text-xs text-gray-700">${ingrediente.costo_unitario.toLocaleString()}</div>
+                                    <div className="text-xs font-medium text-green-600">${ingrediente.total.toLocaleString()}</div>
+                                    <div className="flex justify-end">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={() => handleEliminarIngrediente(ingrediente.id)}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Resumen - Diseño mejorado */}
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                        <div className="grid grid-cols-3 gap-6">
+                          <div className="text-center">
+                            <div className="text-xs font-medium text-gray-600 mb-1">Costo Ingredientes</div>
+                            <div className="text-lg font-bold text-blue-600">
+                              ${totalIngredientes.toLocaleString()}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs font-medium text-gray-600 mb-1">Número de Porciones</div>
+                            <div className="text-lg font-bold text-indigo-600">
+                              {ingredientes.length}
+                            </div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs font-medium text-gray-600 mb-1">Costo Total</div>
+                            <div className="text-lg font-bold text-green-600">
+                              ${totalIngredientes.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 pt-3 border-t border-blue-200">
+                          <div className="flex justify-between items-center text-xs text-gray-600">
+                            <span>Total de ingredientes: {ingredientes.length}</span>
+                            <span>Costo promedio por ingrediente: ${ingredientes.length > 0 ? (totalIngredientes / ingredientes.length).toFixed(2) : '0.00'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="preparacion" className="mt-3">
+                    <div className="space-y-4">
+                      <div className="bg-green-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-green-800 mb-4">Preparación</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Nota y/o Preparación</Label>
+                            <textarea
+                              className="w-full h-32 p-3 text-sm border border-gray-300 rounded-md bg-white resize"
+                              placeholder="Escriba las notas o instrucciones de preparación aquí..."
+                              value={utilidadesProducto.nota}
+                              onChange={(e) => onUtilidadesProductoChange({
+                                ...utilidadesProducto,
+                                nota: e.target.value
+                              })}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="unidades-servicio" className="mt-3">
+                    <div className="space-y-4">
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-purple-800 mb-4">Unidades de Servicio</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-700">Configuración de Unidades</Label>
+                            <div className="text-sm text-gray-600 mt-2">
+                              Aquí se configurarán las unidades de servicio para la receta.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </>
+              )}
             </Tabs>
           </div>
 
@@ -1624,63 +2750,441 @@ const ProductosPage: React.FC = () => {
   const { startLoading, stopLoading } = useLoading();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   // Estados
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [activeTab, setActiveTab] = useState("productos");
   const [editingProducto, setEditingProducto] = useState<ProductoData | null>(null);
-
-  // Queries
-  const { data: productos = [], isLoading } = useQuery({
-    queryKey: ["productos"],
-    queryFn: productosService.listProductos,
+  const [esReceta, setEsReceta] = useState<boolean>(false);
+  const [verMenus, setVerMenus] = useState<boolean>(false); // Filtro para mostrar solo recetas
+  const [isFiltering, setIsFiltering] = useState<boolean>(false); // Loading para el filtro
+  
+  // Estados para utilidades del producto
+  const [tiempoPreparacion, setTiempoPreparacion] = useState<string>("00:00:00");
+  const [unidadTiempoPreparacion, setUnidadTiempoPreparacion] = useState<number>(0);
+  const [utilidadesProducto, setUtilidadesProducto] = useState<UtilidadProducto>({
+    id_producto: 0,
+    id_indicie_dificultad: 1,
+    tasa_perdida: 0.00000,
+    tasa_utilidad: 0.00000,
+    tiempo_preparacion: "00:00:00",
+    nota: "",
+    estado: 1
   });
+
+  // Debug: mostrar el valor de esReceta
+  React.useEffect(() => {
+    console.log('🎯 esReceta actualizado:', esReceta);
+  }, [esReceta]);
+
+  // Función para manejar el cambio del switch con timeout
+  const handleVerMenusChange = (checked: boolean) => {
+    console.log('🔄 Switch cambiado a:', checked);
+    setIsFiltering(true);
+    
+    // Timeout de 2 segundos
+    setTimeout(() => {
+      setVerMenus(checked);
+      setIsFiltering(false);
+    }, 2000);
+  };
+
+  // Función para obtener las columnas de la tabla según el filtro
+  const getTableColumns = () => {
+    if (verMenus) {
+      // Columnas para recetas
+      return [
+        { key: 'acciones', label: 'Acciones', className: 'px-2 py-1 text-teal-600 w-20' },
+        { key: 'codigo_nombre', label: 'Código / Nombre', className: 'px-4 py-3 w-64' },
+        { key: 'tipo_servicio', label: 'Tipo Servicio', className: 'px-4 py-3 w-40' },
+        { key: 'linea_sublinea', label: 'Línea / Sublínea', className: 'px-4 py-3 w-32' },
+        { key: 'tipo_producto', label: 'Tipo Menu', className: 'px-4 py-3 w-24' },
+        { key: 'estado', label: 'Estado', className: 'px-4 py-3 w-24' }
+      ];
+    } else {
+      // Columnas para productos normales
+      return [
+        { key: 'acciones', label: 'Acciones', className: 'px-2 py-1 text-teal-600 w-20' },
+        { key: 'codigo_nombre', label: 'Código / Nombre', className: 'px-4 py-3 w-64' },
+        { key: 'referencia_medida', label: 'Referencia / Medida', className: 'px-4 py-3 w-40' },
+        { key: 'linea_sublinea', label: 'Línea / Sublínea', className: 'px-4 py-3 w-32' },
+        { key: 'costo', label: 'Costo', className: 'px-4 py-3 w-24' },
+        { key: 'estado', label: 'Estado', className: 'px-4 py-3 w-24' }
+      ];
+    }
+  };
+
+  // Función para renderizar el contenido de una celda según el tipo
+  const renderCellContent = (producto: ProductoData, columnKey: string) => {
+    switch (columnKey) {
+      case 'acciones':
+        return (
+          <div className="flex items-center justify-start gap-1">
+            <Can action="accion-editar-producto">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEditarProducto(producto)}
+                      aria-label="Editar producto"
+                    >
+                      <Edit className="h-5 w-5 text-cyan-600 hover:text-cyan-800 transition-colors" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Editar</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </Can>
+
+            {producto.estado === 1 ? (
+              <Can action="accion-desactivar-producto">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Inactivar producto"
+                          >
+                            <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Inactivar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción inactivará el producto "{producto.nombre}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleDeactivateProducto(producto.id!)}
+                      >
+                        Inactivar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </Can>
+            ) : (
+              <>
+                <Can action="accion-activar-producto">
+                  <AlertDialog>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Activar producto"
+                            >
+                              <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
+                            </Button>
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Activar</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción activará el producto "{producto.nombre}".
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleActivateProducto(producto.id!)}
+                        >
+                          Activar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </Can>
+
+                <Can action="accion-eliminar-producto">
+                  <AlertDialog>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Eliminar producto"
+                            >
+                              <Trash2 className="h-5 w-5 text-red-600 hover:text-red-800 transition-colors" />
+                            </Button>
+                          </AlertDialogTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Eliminar</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro de eliminar este producto?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción eliminará permanentemente el producto "{producto.nombre}" y todos sus datos relacionados. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteProducto(producto.id!)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Eliminar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </Can>
+              </>
+            )}
+          </div>
+        );
+      
+      case 'codigo_nombre':
+        return (
+          <div className="flex flex-col">
+            <div className="flex items-center justify-center gap-2">
+              <span className="text-xs font-medium text-gray-900">
+                {producto.codigo || "-"}
+              </span>
+              <span className="text-xs text-blue-600 font-medium">
+                {producto.inv_categorias?.nombre || "-"}
+              </span>
+            </div>
+            <span className="text-xs text-gray-600 mt-1 text-center">
+              {producto.nombre}
+            </span>
+          </div>
+        );
+      
+      case 'referencia_medida':
+        return (
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-900">
+              {producto.referencia || "-"}
+            </span>
+            <span className="text-xs text-gray-600 mt-1">
+              {producto.inv_medidas?.nombre || "-"}
+            </span>
+          </div>
+        );
+      
+      case 'tipo_servicio':
+        return (
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-900">
+              {producto.id_clase_servicio ? claseServicios.find(cs => cs.id === producto.id_clase_servicio)?.nombre || "-" : "-"}
+            </span>
+            <span className="text-xs text-gray-600 mt-1">
+              {producto.tipo_menu || "-"}
+            </span>
+          </div>
+        );
+      
+      case 'linea_sublinea':
+        return (
+          <div className="flex flex-col">
+            <span className="text-xs text-gray-900">
+              {producto.inv_sublineas?.inv_lineas?.nombre || "-"}
+            </span>
+            <span className="text-xs text-gray-600 mt-1">
+              {producto.inv_sublineas?.nombre || "-"}
+            </span>
+          </div>
+        );
+      
+      case 'costo':
+        return (
+          <div className="text-right">
+            {producto.ultimo_costo ? (
+              <span className="text-xs font-medium text-green-600">
+                ${producto.ultimo_costo.toLocaleString('es-CO', { minimumFractionDigits: 2 })}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400">-</span>
+            )}
+          </div>
+        );
+      
+      case 'tipo_producto':
+        return (
+          <div className="text-center">
+            <span className="text-xs text-gray-900">
+              {producto.id_tipo_producto ? tipos.find(t => t.id === producto.id_tipo_producto)?.nombre || "-" : "-"}
+            </span>
+          </div>
+        );
+      
+      case 'estado':
+        return (
+          <div className="flex justify-center">
+            <Badge variant={producto.estado === 1 ? "default" : "secondary"} className="text-xs">
+              {producto.estado === 1 ? "Activo" : "Inactivo"}
+            </Badge>
+          </div>
+        );
+      
+      default:
+        return <span>-</span>;
+    }
+  };
+
+  // Queries - consulta real a la base de datos según el filtro
+  const { data: productos = [], isLoading, refetch } = useQuery({
+    queryKey: ["productos", verMenus],
+    queryFn: () => productosService.listProductos(verMenus), // Consulta real según el filtro
+    staleTime: 0, // Deshabilitar cache para consultas en tiempo real
+    refetchOnWindowFocus: false, // Evitar refetch automático
+  });
+
+  // Query separada para ingredientes (siempre todos los productos activos)
+  const { data: productosParaIngredientes = [] } = useQuery({
+    queryKey: ["productos-ingredientes"],
+    queryFn: () => productosService.listProductos(false), // Siempre false para ingredientes
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+  });
+
 
   const { data: medidas = [] } = useQuery({
     queryKey: ["medidas"],
     queryFn: medidasService.listMedidas,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: medidasPrincipales = [] } = useQuery({
+    queryKey: ["medidas-principales"],
+    queryFn: productosService.listMedidasPrincipales,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
 
   const { data: categorias = [] } = useQuery({
     queryKey: ["categorias"],
     queryFn: productosService.listCategorias,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: sublineas = [] } = useQuery({
     queryKey: ["sublineas"],
     queryFn: sublineasService.listSublineas,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: lineas = [] } = useQuery({
     queryKey: ["lineas"],
     queryFn: lineasService.listLineas,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: tipos = [] } = useQuery({
     queryKey: ["tipos"],
     queryFn: tiposService.listTipos,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
+
+  const { data: claseServicios = [] } = useQuery({
+    queryKey: ["claseServicios"],
+    queryFn: claseServiciosService.listClaseServicios,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+  });
+
+  // Determinar si es receta basándose en la categoría del producto en edición
+  React.useEffect(() => {
+    if (editingProducto && categorias.length > 0) {
+      const categoriaSeleccionada = categorias.find(cat => cat.id === editingProducto.id_categoria);
+      setEsReceta(categoriaSeleccionada?.isreceta === 1);
+    } else {
+      setEsReceta(false);
+    }
+  }, [editingProducto, categorias]);
+
+  // Escuchar cambios de categoría desde el formulario
+  React.useEffect(() => {
+    const handleCategoriaChange = (event: CustomEvent) => {
+      console.log('📡 Evento recibido:', event.detail);
+      setEsReceta(event.detail.esReceta);
+    };
+
+    window.addEventListener('categoriaChanged', handleCategoriaChange as EventListener);
+    
+    return () => {
+      window.removeEventListener('categoriaChanged', handleCategoriaChange as EventListener);
+    };
+  }, []);
 
   const { data: interfacesContables = [] } = useQuery({
     queryKey: ["interfacesContables"],
     queryFn: interfazContableService.listInterfacesContables,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const { data: presentacionesMedidas = [] } = useQuery({
     queryKey: ["presentacionesMedidas"],
     queryFn: presentacionMedidasService.listPresentacionesMedidas,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Log cuando los datos cambien
 
+  // Refetch de todos los selects cuando se abre el formulario
+  React.useEffect(() => {
+    if (activeTab === "formulario") {
+      console.log("🔄 Refetching todos los selects del formulario...");
+      queryClient.invalidateQueries({ queryKey: ["medidas"] });
+      queryClient.invalidateQueries({ queryKey: ["medidas-principales"] });
+      queryClient.invalidateQueries({ queryKey: ["categorias"] });
+      queryClient.invalidateQueries({ queryKey: ["sublineas"] });
+      queryClient.invalidateQueries({ queryKey: ["lineas"] });
+      queryClient.invalidateQueries({ queryKey: ["tipos"] });
+      queryClient.invalidateQueries({ queryKey: ["claseServicios"] });
+      queryClient.invalidateQueries({ queryKey: ["interfacesContables"] });
+      queryClient.invalidateQueries({ queryKey: ["presentacionesMedidas"] });
+    }
+  }, [activeTab, queryClient]);
+
   // Mutations
   const createProductoMutation = useMutation({
-    mutationFn: async (data: ProductoForm) => {
+    mutationFn: async (data: ProductoForm & { tiempoPreparacion?: string; utilidadesProducto?: UtilidadProducto }) => {
       startLoading();
+      
       const productoData = {
-        id: 0, // ID temporal para creación
+        // No incluir id para que sea autoincrementable
         codigo: data.codigo!,
         nombre: data.nombre,
         id_medida: data.id_medida,
@@ -1692,28 +3196,61 @@ const ProductosPage: React.FC = () => {
         id_color: data.id_color || undefined,
         referencia: data.referencia || undefined,
         id_clase_servicio: data.id_clase_servicio || undefined,
-        tipo_menu: data.tipo_menu || undefined,
+        tipo_menu: data.tipo_menu || "",
         no_ciclo: data.no_ciclo || undefined,
         id_tipo_zona: data.id_tipo_zona || undefined,
         ultimo_costo: data.ultimo_costo || undefined,
         id_proveedor: data.id_proveedor || undefined,
-        frecuencia: data.frecuencia || "semanal",
+        frecuencia: esReceta ? null : (data.frecuencia || "semanal"),
         controla_existencia: data.controla_existencia || undefined,
         controla_lotes: data.controla_lotes || undefined,
         imgbase64: data.imgbase64 || undefined,
-        id_usuario: undefined,
-        fecsys: undefined,
+        id_usuario: user?.id,
+        fecsys: new Date().toISOString(),
         estado: 1
-      } as ProductoData;
+      } as Omit<ProductoData, 'id'>;
 
-      return await productosService.createProducto(productoData);
+      // Incluir ingredientes y empaques si existen (excluir campos de utilidades)
+      const { tiempoPreparacion: _, utilidadesProducto: __, ...dataWithoutUtilidades } = data as any;
+      const dataWithEmpaques = {
+        ...productoData,
+        empaques: dataWithoutUtilidades.empaques || [],
+        ingredientes: dataWithoutUtilidades.ingredientes || []
+      };
+
+      // Debug: mostrar datos que se van a enviar
+      console.log('📦 Datos de creación:', {
+        id_usuario: dataWithEmpaques.id_usuario,
+        frecuencia: dataWithEmpaques.frecuencia,
+        esReceta: esReceta,
+        ingredientes_count: (data as any).ingredientes?.length || 0
+      });
+
+      const producto = await productosService.createProducto(dataWithEmpaques);
+      
+      // Guardar utilidades si es una receta
+      if (esReceta && producto.id && data.tiempoPreparacion && data.utilidadesProducto) {
+        await productosService.saveOrUpdateProductoUtilidades(producto.id, {
+          id_producto: producto.id,
+          id_indicie_dificultad: 1,
+          tasa_perdida: 0.00000,
+          tasa_utilidad: 0.00000,
+          tiempo_preparacion: data.tiempoPreparacion,
+          nota: data.utilidadesProducto.nota,
+          estado: 1
+        });
+      }
+      
+      return producto;
     },
-    onSuccess: () => {
+    onSuccess: async (producto) => {
       stopLoading();
       toast({
         title: "Producto creado",
         description: "El producto ha sido creado exitosamente",
       });
+      
+      
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       setActiveTab("productos");
       setEditingProducto(null);
@@ -1730,16 +3267,46 @@ const ProductosPage: React.FC = () => {
   });
 
   const updateProductoMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: Partial<ProductoData> }) => {
+    mutationFn: async ({ id, data, tiempoPreparacion, utilidadesProducto }: { 
+      id: number; 
+      data: Partial<ProductoData>; 
+      tiempoPreparacion?: string; 
+      utilidadesProducto?: UtilidadProducto 
+    }) => {
       startLoading();
-      return productosService.updateProducto(id, data);
+      
+      // Incluir ingredientes y empaques si existen (excluir campos de utilidades)
+      const { tiempoPreparacion: _, utilidadesProducto: __, ...dataWithoutUtilidades } = data as any;
+      const dataWithEmpaques = {
+        ...dataWithoutUtilidades,
+        empaques: dataWithoutUtilidades.empaques || [],
+        ingredientes: dataWithoutUtilidades.ingredientes || []
+      };
+      const producto = await productosService.updateProducto(id, dataWithEmpaques);
+      
+      // Actualizar utilidades si es una receta
+      if (esReceta && id && tiempoPreparacion && utilidadesProducto) {
+        await productosService.saveOrUpdateProductoUtilidades(id, {
+          id_producto: id,
+          id_indicie_dificultad: 1,
+          tasa_perdida: 0.00000,
+          tasa_utilidad: 0.00000,
+          tiempo_preparacion: tiempoPreparacion || "00:00:00",
+          nota: utilidadesProducto?.nota || "",
+          estado: 1
+        });
+      }
+      
+      return producto;
     },
-    onSuccess: () => {
+    onSuccess: async (producto, variables) => {
       stopLoading();
       toast({
         title: "Producto actualizado",
         description: "El producto ha sido actualizado exitosamente",
       });
+      
+      
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       setActiveTab("productos");
       setEditingProducto(null);
@@ -1793,6 +3360,25 @@ const ProductosPage: React.FC = () => {
     },
   });
 
+  const deleteProductoMutation = useMutation({
+    mutationFn: productosService.deleteProductoPermanent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
+      toast({
+        title: 'Éxito',
+        description: 'Producto eliminado permanentemente',
+      });
+    },
+    onError: (error: any) => {
+      console.error('Error al eliminar producto:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'No se pudo eliminar el producto',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Filtros
   const productosFiltrados = useMemo(() => {
     const filtered = (productos as ProductoData[]).filter((producto: ProductoData) => {
@@ -1810,7 +3396,9 @@ const ProductosPage: React.FC = () => {
 
       return matchesSearch && matchesStatus;
     });
-    return filtered;
+    
+    // Ordenar por ID en orden descendente (último registro primero)
+    return filtered.sort((a, b) => b.id - a.id);
   }, [productos, searchTerm, statusFilter]);
 
   // Handlers
@@ -1832,12 +3420,16 @@ const ProductosPage: React.FC = () => {
     deactivateProductoMutation.mutate(id);
   };
 
+  const handleDeleteProducto = (id: number) => {
+    deleteProductoMutation.mutate(id);
+  };
+
   return (
     <div className="p-4 max-w-full mx-auto">
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
           <Package className="w-8 h-8 text-cyan-600" />
-          Gestión de Productos
+          Gestión de Productos/Recetas
         </h1>
       </div>
 
@@ -1848,7 +3440,7 @@ const ProductosPage: React.FC = () => {
             className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
           >
             <Package className="w-4 h-4 mr-2" />
-            Productos
+            Productos/Recetas
           </TabsTrigger>
           <TabsTrigger
             value="formulario"
@@ -1856,7 +3448,7 @@ const ProductosPage: React.FC = () => {
             className="data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
           >
             <Plus className="w-4 h-4 mr-2" />
-            {editingProducto ? 'Editar Producto' : 'Nuevo Producto'}
+            {editingProducto ? (esReceta ? 'Editar Receta' : 'Editar Producto') : (esReceta ? 'Nueva Receta' : 'Nuevo Producto')}
           </TabsTrigger>
         </TabsList>
 
@@ -1866,7 +3458,7 @@ const ProductosPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Package className="w-5 h-5 text-cyan-600" />
-                  <span className="text-lg font-semibold text-gray-700">PRODUCTOS</span>
+                  <span className="text-lg font-semibold text-gray-700">PRODUCTOS/RECETAS</span>
                 </div>
                 <div className="flex space-x-2">
                   <Can action="accion-crear-producto">
@@ -1908,6 +3500,17 @@ const ProductosPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center gap-2 min-w-[140px]">
+                  <Label htmlFor="ver-menus" className="text-sm font-medium text-cyan-600">
+                    Ver Menús ?
+                  </Label>
+                  <Switch
+                    id="ver-menus"
+                    checked={verMenus}
+                    onCheckedChange={handleVerMenusChange}
+                    className="data-[state=checked]:bg-cyan-600 hover:bg-cyan-100 hover:shadow-md transition-all duration-200"
+                  />
+                </div>
               </div>
 
               {/* Tabla */}
@@ -1915,173 +3518,37 @@ const ProductosPage: React.FC = () => {
                 <Table>
                   <TableHeader className="bg-cyan-50">
                     <TableRow className="text-left font-semibold text-gray-700">
-                      <TableHead className="px-2 py-1 text-teal-600 w-20">Acciones</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Código</TableHead>
-                      <TableHead className="px-4 py-3">Nombre</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Referencia</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Medida</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Categoría</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Sublínea</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Costo</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Estado</TableHead>
+                      {getTableColumns().map((column) => (
+                        <TableHead key={column.key} className={column.className}>
+                          {column.label}
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
+                    {isLoading || isFiltering ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
+                        <TableCell colSpan={getTableColumns().length} className="h-24 text-center">
                           <div className="flex items-center justify-center">
                             <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                            Cargando productos...
+                            {isFiltering ? 'Filtrando productos...' : 'Cargando productos...'}
                           </div>
                         </TableCell>
                       </TableRow>
                     ) : productosFiltrados.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center">
+                        <TableCell colSpan={getTableColumns().length} className="h-24 text-center">
                           No hay productos disponibles.
                         </TableCell>
                       </TableRow>
                     ) : (
                       productosFiltrados.map((producto: ProductoData) => (
-                        <TableRow key={producto.id} className="hover:bg-gray-50">
-                          <TableCell className="px-2 py-1">
-                            <div className="flex items-center justify-start gap-1">
-                              <Can action="accion-editar-producto">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => handleEditarProducto(producto)}
-                                        aria-label="Editar producto"
-                                      >
-                                        <Edit className="h-5 w-5 text-cyan-600 hover:text-cyan-800 transition-colors" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Editar</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </Can>
-
-                              {producto.estado === 1 ? (
-                                <Can action="accion-desactivar-producto">
-                                  <AlertDialog>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <AlertDialogTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              aria-label="Inactivar producto"
-                                            >
-                                              <Lock className="h-5 w-5 text-yellow-600 hover:text-yellow-800 transition-colors" />
-                                            </Button>
-                                          </AlertDialogTrigger>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Inactivar</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Esta acción inactivará el producto "{producto.nombre}".
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleDeactivateProducto(producto.id!)}
-                                        >
-                                          Inactivar
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </Can>
-                              ) : (
-                                <Can action="accion-activar-producto">
-                                  <AlertDialog>
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <AlertDialogTrigger asChild>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              aria-label="Activar producto"
-                                            >
-                                              <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-800 transition-colors" />
-                                            </Button>
-                                          </AlertDialogTrigger>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Activar</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Esta acción activará el producto "{producto.nombre}".
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleActivateProducto(producto.id!)}
-                                        >
-                                          Activar
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </Can>
-                              )}
-
-                            </div>
+                        <TableRow key={producto.id} className="hover:bg-gray-50 text-xs">
+                          {getTableColumns().map((column) => (
+                            <TableCell key={column.key} className={column.className}>
+                              {renderCellContent(producto, column.key)}
                           </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-24">
-                            {producto.codigo || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900">
-                            {producto.nombre}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
-                            {producto.referencia || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
-                            {producto.inv_medidas?.nombre || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
-                            {producto.inv_categorias?.nombre || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
-                            {producto.inv_sublineas?.nombre || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
-                            {producto.ultimo_costo ? `$${producto.ultimo_costo.toLocaleString()}` : "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2">
-                            <Badge
-                              variant={producto.estado === 1 ? "default" : "secondary"}
-                              className={
-                                producto.estado === 1
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }
-                            >
-                              {producto.estado === 1 ? "Activo" : "Inactivo"}
-                            </Badge>
-                          </TableCell>
+                          ))}
                         </TableRow>
                       ))
                     )}
@@ -2103,13 +3570,33 @@ const ProductosPage: React.FC = () => {
             tipos={tipos}
             interfacesContables={interfacesContables}
             presentacionesMedidas={presentacionesMedidas}
+            productos={productosParaIngredientes}
+            claseServicios={claseServicios}
+            esReceta={esReceta}
+            user={user}
+            tiempoPreparacion={tiempoPreparacion}
+            utilidadesProducto={utilidadesProducto}
+            unidadTiempoPreparacion={unidadTiempoPreparacion}
+            medidasPrincipales={medidasPrincipales as any[]}
+            onTiempoPreparacionChange={setTiempoPreparacion}
+            onUtilidadesProductoChange={setUtilidadesProducto}
+            onUnidadTiempoPreparacionChange={setUnidadTiempoPreparacion}
             onSubmit={(data) => {
               if (editingProducto) {
-                updateProductoMutation.mutate({ id: editingProducto.id!, data });
+                updateProductoMutation.mutate({ 
+                  id: editingProducto.id!, 
+                  data,
+                  tiempoPreparacion: tiempoPreparacion,
+                  utilidadesProducto: utilidadesProducto
+                });
               } else {
                 // Para crear, no incluir el id
                 const { id, ...createData } = data as any;
-                createProductoMutation.mutate(createData);
+                createProductoMutation.mutate({
+                  ...createData,
+                  tiempoPreparacion: tiempoPreparacion,
+                  utilidadesProducto: utilidadesProducto
+                });
               }
             }}
             isLoading={createProductoMutation.isPending || updateProductoMutation.isPending}
