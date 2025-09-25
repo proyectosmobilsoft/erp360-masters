@@ -1610,7 +1610,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                 <Input
                   id="nombre"
                   value={formData.nombre}
-                  onChange={(e) => handleInputChange('nombre', e.target.value)}
+                  onChange={(e) => handleInputChange('nombre', e.target.value.toUpperCase())}
                   required
                   className="h-8 text-sm bg-yellow-25"
                   autoComplete="off"
@@ -1932,7 +1932,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             onValueChange={(value) => onUnidadTiempoPreparacionChange(parseInt(value))}
                           >
                             <SelectTrigger className="h-8 text-sm">
-                              <SelectValue placeholder="Unidad" />
+                              <SelectValue placeholder={unidadTiempoPreparacion === 0 ? "Unidad" : ""} />
                             </SelectTrigger>
                             <SelectContent>
                               {medidasPrincipales.map((medida) => (
@@ -2011,65 +2011,67 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
               <TabsContent value="precio" className="mt-3">
                 <div className="grid grid-cols-12 gap-4">
                   {/* Columna izquierda - Costos e Inventario */}
-                  <div className="col-span-3 space-y-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
+                  <div className="col-span-6 space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <Input
+                            id="ultimo_costo"
+                            type="text"
+                            value={formatCurrencyDisplay(ultimoCostoDisplay)}
+                            onChange={handleUltimoCostoChange}
+                            onFocus={handleUltimoCostoFocus}
+                            onBlur={handleUltimoCostoBlur}
+                            className="h-8 text-sm pl-8 bg-yellow-25"
+                            autoComplete="off"
+                          />
+                        </div>
                       </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <Input
-                          id="ultimo_costo"
-                          type="text"
-                          value={formatCurrencyDisplay(ultimoCostoDisplay)}
-                          onChange={handleUltimoCostoChange}
-                          onFocus={handleUltimoCostoFocus}
-                          onBlur={handleUltimoCostoBlur}
-                          className="h-8 text-sm pl-8 bg-yellow-25"
-                          autoComplete="off"
-                        />
+
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <Input
+                            id="costo_promedio"
+                            type="text"
+                            value={formatCurrencyDisplay(costoPromedioDisplay)}
+                            onChange={handleCostoPromedioChange}
+                            onFocus={handleCostoPromedioFocus}
+                            onBlur={handleCostoPromedioBlur}
+                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                            autoComplete="off"
+                            disabled
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
+                        </div>
                         <Input
-                          id="costo_promedio"
-                          type="text"
-                          value={formatCurrencyDisplay(costoPromedioDisplay)}
-                          onChange={handleCostoPromedioChange}
-                          onFocus={handleCostoPromedioFocus}
-                          onBlur={handleCostoPromedioBlur}
-                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                          autoComplete="off"
-                          disabled
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
-                      </div>
-                      <Input
-                        id="existencia_actual"
-                        type="number"
+                          id="existencia_actual"
+                          type="number"
                           value="0"
                           className="h-8 text-sm bg-gray-100 text-gray-400"
-                        autoComplete="off"
+                          autoComplete="off"
                           disabled
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                        />
                       </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                        </div>
                         <Select
                           value={formData.frecuencia || "semanal"}
                           onValueChange={(value) => handleInputChange('frecuencia', value)}
@@ -2085,68 +2087,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                  </div>
 
-                  {/* Columna central - Precios */}
-                  <div className="col-span-3 space-y-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="precio_mayorista" className="text-sm font-medium">Precio Mayorista</Label>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <Input
-                          id="precio_mayorista"
-                          type="text"
-                          value={formatCurrencyDisplay(precioMayoristaDisplay)}
-                          onChange={handlePrecioMayoristaChange}
-                          onFocus={handlePrecioMayoristaFocus}
-                          onBlur={handlePrecioMayoristaBlur}
-                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                          autoComplete="off"
-                          disabled
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="precio_minorista" className="text-sm font-medium">Precio Minorista</Label>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <Input
-                          id="precio_minorista"
-                          type="text"
-                          value={formatCurrencyDisplay(precioMinoristaDisplay)}
-                          onChange={handlePrecioMinoristaChange}
-                          onFocus={handlePrecioMinoristaFocus}
-                          onBlur={handlePrecioMinoristaBlur}
-                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                          autoComplete="off"
-                          disabled
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
-                      </div>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                        <Input
-                          id="precio_publico"
-                          type="text"
-                          value={formatCurrencyDisplay(precioPublicoDisplay)}
-                          onChange={handlePrecioPublicoChange}
-                          onFocus={handlePrecioPublicoFocus}
-                          onBlur={handlePrecioPublicoBlur}
-                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                          autoComplete="off"
-                          disabled
-                        />
+                      <div className="space-y-1">
+                        <div className="flex items-center">
+                          <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
+                        </div>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                          <Input
+                            id="precio_publico"
+                            type="text"
+                            value={formatCurrencyDisplay(precioPublicoDisplay)}
+                            onChange={handlePrecioPublicoChange}
+                            onFocus={handlePrecioPublicoFocus}
+                            onBlur={handlePrecioPublicoBlur}
+                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                            autoComplete="off"
+                            disabled
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2155,7 +2114,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   <div className="col-span-6 space-y-2">
                     <div className="space-y-1">
                       <Label className="text-sm font-medium underline">Almacenes</Label>
-                      <div className="h-48 border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
+                      <div className="h-32 border border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
                         <span className="text-gray-500 font-medium">GRILLA PRECIOS</span>
                       </div>
                     </div>
@@ -2193,7 +2152,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         <Input
                           id="iva"
                           type="number"
-                          value="0"
+                          value=""
                           readOnly
                           className="h-8 text-sm bg-yellow-25 text-gray-400"
                           autoComplete="off"
@@ -2207,7 +2166,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         <Input
                           id="retencion"
                           type="number"
-                          value="1.5"
+                          value=""
                           readOnly
                           className="h-8 text-sm bg-yellow-25 text-gray-400"
                           autoComplete="off"
@@ -2232,14 +2191,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="14050101"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="INVENTARIO ALIMENTOS"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2254,14 +2213,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="14050202"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="IVA"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2276,14 +2235,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="23654003"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="RET. PRODUCTOS AGROPECUARIOS 1.5%"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2298,14 +2257,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="61351401"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="VTA DE INSUMO, MATE PRIMA AGROPE Y FLORE"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2322,14 +2281,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="41351401"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="VTA DE INSUMO, MATER PRIMA AGROPE Y FLOR"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2344,14 +2303,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="flex gap-2">
                             <Input
                               type="text"
-                              value="24080501"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 w-20 text-gray-400"
                               autoComplete="off"
                             />
                             <Input
                               type="text"
-                              value="IVA GENERADO"
+                              value=""
                               readOnly
                               className="h-8 text-sm bg-yellow-25 flex-1 text-gray-400"
                               autoComplete="off"
@@ -2545,7 +2504,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                               </PopoverTrigger>
                               <PopoverContent className="w-[600px] p-0">
                                 <Command>
-                                  <CommandInput placeholder="Buscar producto..." />
+                                  <CommandInput />
                                   <CommandList>
                                     <CommandEmpty>No se encontraron productos.</CommandEmpty>
                                     <CommandGroup>
@@ -2659,7 +2618,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         <div className="border border-gray-300 rounded-lg overflow-hidden">
                           <div className="bg-blue-100 px-3 py-2 text-xs font-medium text-gray-700">
                             <div className="grid grid-cols-12 gap-2">
-                              <div className="col-span-5">Nombre Producto</div>
+                              <div className="col-span-5">Producto/Receta</div>
                               <div className="col-span-1 text-center">Cantidad</div>
                               <div className="col-span-1 text-center">Unidad</div>
                               <div className="col-span-2">Costo</div>
@@ -2723,7 +2682,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
                       {/* Resumen - Diseño mejorado */}
                       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className={`grid gap-6 ${calcularTotalesIngredientes(ingredientes).cantidadRecetas > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
                           <div className="text-center">
                             <div className="text-xs font-medium text-gray-600 mb-1">Costo Ingredientes</div>
                             <div className="text-lg font-bold text-blue-600">
@@ -2731,13 +2690,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             </div>
                             <div className="text-xs text-gray-500">Solo productos</div>
                           </div>
-                          <div className="text-center">
-                            <div className="text-xs font-medium text-gray-600 mb-1">Total Recetas</div>
-                            <div className="text-lg font-bold text-indigo-600">
-                              ${totalPorciones.toLocaleString()}
+                          {calcularTotalesIngredientes(ingredientes).cantidadRecetas > 0 && (
+                            <div className="text-center">
+                              <div className="text-xs font-medium text-gray-600 mb-1">Total Recetas</div>
+                              <div className="text-lg font-bold text-indigo-600">
+                                ${totalPorciones.toLocaleString()}
+                              </div>
+                              <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
                             </div>
-                            <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
-                          </div>
+                          )}
                           <div className="text-center">
                             <div className="text-xs font-medium text-gray-600 mb-1">Costo Total</div>
                             <div className="text-lg font-bold text-green-600">
