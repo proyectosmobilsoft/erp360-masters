@@ -53,6 +53,7 @@ import {
 } from 'lucide-react';
 import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
+import { productoUnidadesService } from '@/services/productoUnidadesService';
 import { SublineaData as SublineaDataFull } from '@/services/sublineasService';
 import { lineasService, LineaData } from '@/services/lineasService';
 import { tiposService, TipoData } from '@/services/tiposService';
@@ -281,7 +282,6 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     id_clase_servicio: producto?.id_clase_servicio || undefined,
     tipo_menu: producto?.tipo_menu || "",
     no_ciclo: producto?.no_ciclo || 0,
-    id_unidad_servicio: producto?.id_unidad_servicio || undefined,
     ultimo_costo: producto?.ultimo_costo || 0,
     id_proveedor: producto?.id_proveedor || undefined,
     frecuencia: producto?.frecuencia?.toString() || "semanal",
@@ -314,7 +314,6 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           id_clase_servicio: producto.id_clase_servicio || undefined,
           tipo_menu: producto.tipo_menu || "",
           no_ciclo: producto.no_ciclo || 0,
-          id_unidad_servicio: producto.id_unidad_servicio || undefined,
           ultimo_costo: producto.ultimo_costo || 0,
           id_proveedor: producto.id_proveedor || undefined,
           frecuencia: producto.frecuencia?.toString() || "semanal",
@@ -351,7 +350,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [ingredientes, setIngredientes] = useState<any[]>([]);
   const [totalIngredientes, setTotalIngredientes] = useState(0);
   const [totalPorciones, setTotalPorciones] = useState(0);
-
+  
   // Función para calcular totales de ingredientes
   const calcularTotalesIngredientes = (ingredientesList: any[]) => {
     // Separar productos y recetas
@@ -828,7 +827,6 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       id_color: producto?.id_color || undefined,
       referencia: producto?.referencia || "",
       id_clase_servicio: producto?.id_clase_servicio || undefined,
-      id_unidad_servicio: producto?.id_unidad_servicio || undefined,
       ultimo_costo: producto?.ultimo_costo || 0,
       id_proveedor: producto?.id_proveedor || undefined,
       frecuencia: producto?.frecuencia?.toString() || "semanal",
@@ -859,7 +857,6 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_marca: editingProducto.id_marca || undefined,
         id_color: editingProducto.id_color || undefined,
         id_clase_servicio: editingProducto.id_clase_servicio || undefined,
-        id_unidad_servicio: editingProducto.id_unidad_servicio || undefined,
         id_proveedor: editingProducto.id_proveedor || undefined,
         referencia: editingProducto.referencia || "",
         ultimo_costo: editingProducto.ultimo_costo || 0,
@@ -2027,65 +2024,65 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   {/* Columna izquierda - Costos e Inventario */}
                   <div className="col-span-6 space-y-2">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="ultimo_costo"
-                            type="text"
-                            value={formatCurrencyDisplay(ultimoCostoDisplay)}
-                            onChange={handleUltimoCostoChange}
-                            onFocus={handleUltimoCostoFocus}
-                            onBlur={handleUltimoCostoBlur}
-                            className="h-8 text-sm pl-8 bg-yellow-25"
-                            autoComplete="off"
-                          />
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="ultimo_costo"
+                          type="text"
+                          value={formatCurrencyDisplay(ultimoCostoDisplay)}
+                          onChange={handleUltimoCostoChange}
+                          onFocus={handleUltimoCostoFocus}
+                          onBlur={handleUltimoCostoBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="costo_promedio"
-                            type="text"
-                            value={formatCurrencyDisplay(costoPromedioDisplay)}
-                            onChange={handleCostoPromedioChange}
-                            onFocus={handleCostoPromedioFocus}
-                            onBlur={handleCostoPromedioBlur}
-                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                            autoComplete="off"
-                            disabled
-                          />
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="costo_promedio"
+                          type="text"
+                          value={formatCurrencyDisplay(costoPromedioDisplay)}
+                          onChange={handleCostoPromedioChange}
+                          onFocus={handleCostoPromedioFocus}
+                          onBlur={handleCostoPromedioBlur}
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                          autoComplete="off"
+                          disabled
+                        />
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
-                        </div>
-                        <Input
-                          id="existencia_actual"
-                          type="number"
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
+                      </div>
+                      <Input
+                        id="existencia_actual"
+                        type="number"
                           value="0"
                           className="h-8 text-sm bg-gray-100 text-gray-400"
-                          autoComplete="off"
+                        autoComplete="off"
                           disabled
-                        />
-                      </div>
+                      />
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                      </div>
                         <Select
                           value={formData.frecuencia || "semanal"}
                           onValueChange={(value) => handleInputChange('frecuencia', value)}
@@ -2100,25 +2097,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             <SelectItem value="trimestral">Trimestral</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="precio_publico"
-                            type="text"
-                            value={formatCurrencyDisplay(precioPublicoDisplay)}
-                            onChange={handlePrecioPublicoChange}
-                            onFocus={handlePrecioPublicoFocus}
-                            onBlur={handlePrecioPublicoBlur}
-                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                            autoComplete="off"
-                            disabled
-                          />
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="precio_publico"
+                          type="text"
+                          value={formatCurrencyDisplay(precioPublicoDisplay)}
+                          onChange={handlePrecioPublicoChange}
+                          onFocus={handlePrecioPublicoFocus}
+                          onBlur={handlePrecioPublicoBlur}
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                          autoComplete="off"
+                          disabled
+                        />
                         </div>
                       </div>
                     </div>
@@ -2705,13 +2702,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             <div className="text-xs text-gray-500">Solo productos</div>
                           </div>
                           {calcularTotalesIngredientes(ingredientes).cantidadRecetas > 0 && (
-                            <div className="text-center">
+                          <div className="text-center">
                               <div className="text-xs font-medium text-gray-600 mb-1">Total Recetas</div>
-                              <div className="text-lg font-bold text-indigo-600">
+                            <div className="text-lg font-bold text-indigo-600">
                                 ${totalPorciones.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
                             </div>
+                              <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
+                          </div>
                           )}
                           <div className="text-center">
                             <div className="text-xs font-medium text-gray-600 mb-1">Costo Total</div>
@@ -2778,7 +2775,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 </SelectTrigger>
                                 <SelectContent>
                                   {unidadesServicio
-                                    .filter(unidad => !unidadesServicioAsignadas.find(u => u.id === unidad.id))
+                                    .filter(unidad => !unidadesServicioAsignadas.find(u => u.id_unidad_servicio === unidad.id))
                                     .map((unidad) => (
                                     <SelectItem key={unidad.id} value={unidad.id.toString()}>
                                       {unidad.nombre_servicio}
@@ -2797,7 +2794,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 className="h-8 text-sm bg-gray-100 text-gray-600"
                                 readOnly
                               />
-                            </div>
+                          </div>
 
                             <div className="col-span-2 flex justify-end">
                               <Button
@@ -2838,15 +2835,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 </thead>
                                 <tbody>
                                   {unidadesServicioAsignadas.map((unidad, index) => (
-                                    <tr key={unidad.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.codigo || unidad.id}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.nombre_servicio}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.gen_sucursales?.municipio?.nombre || 'N/A'}</td>
-                                      <td className="px-4 py-2 text-sm text-gray-900 text-center">{unidad.no_ppl}</td>
+                                    <tr key={unidad.id_unidad_servicio} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} border-b border-gray-200`}>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.unidad_servicio?.codigo || unidad.id_unidad_servicio}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.unidad_servicio?.nombre_servicio}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900">{unidad.unidad_servicio?.gen_sucursales?.municipio?.nombre || 'N/A'}</td>
+                                      <td className="px-4 py-2 text-sm text-gray-900 text-center">{unidad.unidad_servicio?.no_ppl}</td>
                                       <td className="px-4 py-2 text-center">
                                         <Button
                                           type="button"
-                                          onClick={() => handleEliminarUnidadServicio(unidad.id)}
+                                          onClick={() => handleEliminarUnidadServicio(unidad.id_unidad_servicio)}
                                           variant="outline"
                                           size="sm"
                                           className="h-6 w-6 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -2956,9 +2953,8 @@ const ProductosPage: React.FC = () => {
       setUnidadesServicio(unidadesActivas);
       
       // Cargar unidades asignadas si estamos editando un producto
-      if (editingProducto && editingProducto.id_unidad_servicio) {
-        const idsUnidades = editingProducto.id_unidad_servicio.split(',').map((id: string) => parseInt(id.trim())).filter(id => !isNaN(id));
-        const unidadesAsignadas = unidadesActivas.filter(unidad => idsUnidades.includes(unidad.id!));
+      if (editingProducto && editingProducto.id) {
+        const unidadesAsignadas = await productoUnidadesService.getUnidadesByProducto(editingProducto.id);
         setUnidadesServicioAsignadas(unidadesAsignadas);
       } else {
         setUnidadesServicioAsignadas([]);
@@ -2971,10 +2967,15 @@ const ProductosPage: React.FC = () => {
   const handleAgregarUnidadServicio = () => {
     if (nuevaUnidadServicio.id_unidad_servicio > 0) {
       const unidad = unidadesServicio.find(u => u.id === nuevaUnidadServicio.id_unidad_servicio);
-      if (unidad && !unidadesServicioAsignadas.find(u => u.id === nuevaUnidadServicio.id_unidad_servicio)) {
+      if (unidad && !unidadesServicioAsignadas.find(u => u.id_unidad_servicio === nuevaUnidadServicio.id_unidad_servicio)) {
         const nuevaUnidad = {
-          ...unidad,
-          no_ppl: nuevaUnidadServicio.no_ppl
+          id: 0, // Temporal hasta que se guarde
+          id_producto: editingProducto?.id || 0,
+          id_unidad_servicio: nuevaUnidadServicio.id_unidad_servicio,
+          unidad_servicio: {
+            ...unidad,
+            no_ppl: nuevaUnidadServicio.no_ppl
+          }
         };
         setUnidadesServicioAsignadas([...unidadesServicioAsignadas, nuevaUnidad]);
         setNuevaUnidadServicio({ id_unidad_servicio: 0, no_ppl: 1 });
@@ -2983,7 +2984,7 @@ const ProductosPage: React.FC = () => {
   };
 
   const handleEliminarUnidadServicio = (idUnidad: number) => {
-    setUnidadesServicioAsignadas(unidadesServicioAsignadas.filter(u => u.id !== idUnidad));
+    setUnidadesServicioAsignadas(unidadesServicioAsignadas.filter(u => u.id_unidad_servicio !== idUnidad));
   };
   
   // Estados para utilidades del producto
@@ -3445,7 +3446,6 @@ const ProductosPage: React.FC = () => {
         id_clase_servicio: data.id_clase_servicio || undefined,
         tipo_menu: data.tipo_menu || "",
         no_ciclo: data.no_ciclo || undefined,
-        id_unidad_servicio: data.id_unidad_servicio || undefined,
         ultimo_costo: data.ultimo_costo || undefined,
         id_proveedor: data.id_proveedor || undefined,
         frecuencia: esReceta ? null : (data.frecuencia || "semanal"),
@@ -3492,6 +3492,13 @@ const ProductosPage: React.FC = () => {
     },
     onSuccess: async (producto) => {
       stopLoading();
+      
+      // Sincronizar unidades de servicio si hay alguna asignada
+      if (unidadesServicioAsignadas.length > 0) {
+        const idsUnidades = unidadesServicioAsignadas.map(u => u.id_unidad_servicio);
+        await productoUnidadesService.sincronizarUnidades(producto.id, idsUnidades);
+      }
+      
       toast({
         title: "Producto creado",
         description: "El producto ha sido creado exitosamente",
@@ -3528,7 +3535,6 @@ const ProductosPage: React.FC = () => {
         ...dataWithoutUtilidades,
         empaques: dataWithoutUtilidades.empaques || [],
         ingredientes: dataWithoutUtilidades.ingredientes || [],
-        id_unidad_servicio: data.id_unidad_servicio || undefined
       };
       const producto = await productosService.updateProducto(id, dataWithEmpaques);
       
@@ -3935,29 +3941,24 @@ const ProductosPage: React.FC = () => {
             setNuevaUnidadServicio={setNuevaUnidadServicio}
             handleAgregarUnidadServicio={handleAgregarUnidadServicio}
             handleEliminarUnidadServicio={handleEliminarUnidadServicio}
-            onSubmit={(data) => {
+            onSubmit={async (data) => {
               if (editingProducto) {
-                // Incluir IDs de unidades de servicio al actualizar
-                const dataWithUnidades = {
-                  ...data,
-                  id_unidad_servicio: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
-                };
+                // Actualizar producto
                 updateProductoMutation.mutate({ 
                   id: editingProducto.id!, 
-                  data: dataWithUnidades,
+                  data,
                   tiempoPreparacion: tiempoPreparacion,
                   utilidadesProducto: utilidadesProducto
                 });
+                
+                // Sincronizar unidades de servicio
+                const idsUnidades = unidadesServicioAsignadas.map(u => u.id_unidad_servicio);
+                await productoUnidadesService.sincronizarUnidades(editingProducto.id!, idsUnidades);
               } else {
                 // Para crear, no incluir el id
                 const { id, ...createData } = data as any;
-                // Incluir IDs de unidades de servicio al crear
-                const createDataWithUnidades = {
-                  ...createData,
-                  id_unidad_servicio: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
-                };
                 createProductoMutation.mutate({
-                  ...createDataWithUnidades,
+                  ...createData,
                   tiempoPreparacion: tiempoPreparacion,
                   utilidadesProducto: utilidadesProducto
                 });
