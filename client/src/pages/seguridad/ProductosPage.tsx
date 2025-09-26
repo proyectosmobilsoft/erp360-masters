@@ -281,7 +281,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     id_clase_servicio: producto?.id_clase_servicio || undefined,
     tipo_menu: producto?.tipo_menu || "",
     no_ciclo: producto?.no_ciclo || 0,
-    id_tipo_zona: producto?.id_tipo_zona || undefined,
+    id_unidad_servicio: producto?.id_unidad_servicio || undefined,
     ultimo_costo: producto?.ultimo_costo || 0,
     id_proveedor: producto?.id_proveedor || undefined,
     frecuencia: producto?.frecuencia?.toString() || "semanal",
@@ -314,7 +314,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           id_clase_servicio: producto.id_clase_servicio || undefined,
           tipo_menu: producto.tipo_menu || "",
           no_ciclo: producto.no_ciclo || 0,
-          id_tipo_zona: producto.id_tipo_zona || undefined,
+          id_unidad_servicio: producto.id_unidad_servicio || undefined,
           ultimo_costo: producto.ultimo_costo || 0,
           id_proveedor: producto.id_proveedor || undefined,
           frecuencia: producto.frecuencia?.toString() || "semanal",
@@ -828,7 +828,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       id_color: producto?.id_color || undefined,
       referencia: producto?.referencia || "",
       id_clase_servicio: producto?.id_clase_servicio || undefined,
-      id_tipo_zona: producto?.id_tipo_zona || undefined,
+      id_unidad_servicio: producto?.id_unidad_servicio || undefined,
       ultimo_costo: producto?.ultimo_costo || 0,
       id_proveedor: producto?.id_proveedor || undefined,
       frecuencia: producto?.frecuencia?.toString() || "semanal",
@@ -859,7 +859,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_marca: editingProducto.id_marca || undefined,
         id_color: editingProducto.id_color || undefined,
         id_clase_servicio: editingProducto.id_clase_servicio || undefined,
-        id_tipo_zona: editingProducto.id_tipo_zona || undefined,
+        id_unidad_servicio: editingProducto.id_unidad_servicio || undefined,
         id_proveedor: editingProducto.id_proveedor || undefined,
         referencia: editingProducto.referencia || "",
         ultimo_costo: editingProducto.ultimo_costo || 0,
@@ -2956,9 +2956,9 @@ const ProductosPage: React.FC = () => {
       setUnidadesServicio(unidadesActivas);
       
       // Cargar unidades asignadas si estamos editando un producto
-      if (editingProducto && editingProducto.id_tipo_zona) {
-        const idsUnidades = editingProducto.id_tipo_zona.split(',').map((id: string) => parseInt(id.trim()));
-        const unidadesAsignadas = unidadesActivas.filter(unidad => idsUnidades.includes(unidad.id));
+      if (editingProducto && editingProducto.id_unidad_servicio) {
+        const idsUnidades = editingProducto.id_unidad_servicio.split(',').map((id: string) => parseInt(id.trim())).filter(id => !isNaN(id));
+        const unidadesAsignadas = unidadesActivas.filter(unidad => idsUnidades.includes(unidad.id!));
         setUnidadesServicioAsignadas(unidadesAsignadas);
       } else {
         setUnidadesServicioAsignadas([]);
@@ -3445,7 +3445,7 @@ const ProductosPage: React.FC = () => {
         id_clase_servicio: data.id_clase_servicio || undefined,
         tipo_menu: data.tipo_menu || "",
         no_ciclo: data.no_ciclo || undefined,
-        id_tipo_zona: data.id_tipo_zona || undefined,
+        id_unidad_servicio: data.id_unidad_servicio || undefined,
         ultimo_costo: data.ultimo_costo || undefined,
         id_proveedor: data.id_proveedor || undefined,
         frecuencia: esReceta ? null : (data.frecuencia || "semanal"),
@@ -3528,7 +3528,7 @@ const ProductosPage: React.FC = () => {
         ...dataWithoutUtilidades,
         empaques: dataWithoutUtilidades.empaques || [],
         ingredientes: dataWithoutUtilidades.ingredientes || [],
-        id_tipo_zona: data.id_tipo_zona || undefined
+        id_unidad_servicio: data.id_unidad_servicio || undefined
       };
       const producto = await productosService.updateProducto(id, dataWithEmpaques);
       
@@ -3940,7 +3940,7 @@ const ProductosPage: React.FC = () => {
                 // Incluir IDs de unidades de servicio al actualizar
                 const dataWithUnidades = {
                   ...data,
-                  id_tipo_zona: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
+                  id_unidad_servicio: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
                 };
                 updateProductoMutation.mutate({ 
                   id: editingProducto.id!, 
@@ -3954,7 +3954,7 @@ const ProductosPage: React.FC = () => {
                 // Incluir IDs de unidades de servicio al crear
                 const createDataWithUnidades = {
                   ...createData,
-                  id_tipo_zona: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
+                  id_unidad_servicio: unidadesServicioAsignadas.map(u => u.id).join(',') || undefined
                 };
                 createProductoMutation.mutate({
                   ...createDataWithUnidades,
