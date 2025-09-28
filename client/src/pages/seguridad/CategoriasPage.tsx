@@ -478,12 +478,11 @@ const CategoriasPage: React.FC = () => {
   const createCategoriaMutation = useMutation({
     mutationFn: async (data: CategoriaForm) => {
       startLoading();
-      const categoriaData: CategoriaData = {
-        id: data.id!,
+      const categoriaData = {
         nombre: data.nombre,
         isreceta: data.isreceta,
         requiere_empaques: data.requiere_empaques,
-        estado: 1,
+        estado: data.estado || 1,
         imgruta: data.imgruta
       };
       

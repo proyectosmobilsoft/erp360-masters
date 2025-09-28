@@ -218,8 +218,7 @@ const TiposPage: React.FC = () => {
   const createTipoMutation = useMutation({
     mutationFn: async (data: TipoForm) => {
       startLoading();
-      const tipoData: TipoData = {
-        id: 0, // ID temporal para creación
+      const tipoData = {
         codigo: data.codigo!,
         nombre: data.nombre,
         es_receta: data.es_receta || false,

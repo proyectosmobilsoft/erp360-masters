@@ -43,7 +43,7 @@ export const listCategorias = async (): Promise<CategoriaData[]> => {
 /**
  * Crea una nueva categoría
  */
-export const createCategoria = async (categoria: CategoriaData): Promise<CategoriaData> => {
+export const createCategoria = async (categoria: Omit<CategoriaData, 'id'>): Promise<CategoriaData> => {
   try {
     const { data, error } = await supabase
       .from('inv_categorias')

@@ -1335,9 +1335,27 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     );
   }, [presentacionesMedidas, formData.id_medida]);
 
-  // Filtrar tipos de producto según si es receta o no
+  // Ordenar categorías mostrando primero las que tienen isreceta=1, luego isreceta=0
+  const categoriasOrdenadas = useMemo(() => {
+    return [...categorias].sort((a, b) => {
+      // Primero las que tienen isreceta=1, luego las que tienen isreceta=0
+      if (a.isreceta !== b.isreceta) {
+        return b.isreceta - a.isreceta; // 1 primero, luego 0
+      }
+      // Si tienen el mismo isreceta, ordenar por nombre
+      return a.nombre.localeCompare(b.nombre);
+    });
+  }, [categorias]);
+
+  // Filtrar tipos de producto según si es receta o no y solo mostrar activos
   const tiposFiltrados = useMemo(() => {
     return tipos.filter(tipo => {
+      // Solo mostrar tipos activos (estado=1)
+      if (tipo.estado !== 1) {
+        return false;
+      }
+      
+      // Filtrar por es_receta según el contexto
       if (esReceta) {
         return tipo.es_receta === true;
       } else {
@@ -1649,7 +1667,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
                       </SelectTrigger>
                       <SelectContent>
-                        {categorias.map((categoria) => (
+                        {categoriasOrdenadas.map((categoria) => (
                           <SelectItem key={categoria.id} value={categoria.id.toString()}>
                             {categoria.nombre}
                           </SelectItem>

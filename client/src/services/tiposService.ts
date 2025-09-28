@@ -32,7 +32,7 @@ export const tiposService = {
   },
 
   // Crear una nueva tipo
-  async createTipo(tipoData: TipoData) {
+  async createTipo(tipoData: Omit<TipoData, 'id'>) {
     const { data, error } = await supabase
       .from('inv_tipo_producto')
       .insert([tipoData])
