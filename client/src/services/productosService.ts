@@ -205,15 +205,22 @@ export const listProductos = async (soloRecetas?: boolean): Promise<ProductoData
 
     console.log('📊 Productos obtenidos antes del filtro:', data?.length || 0);
 
-    // Aplicar filtro en el frontend si se solicita
+    // Aplicar filtro en el frontend
     let productosFiltrados = data as unknown as ProductoData[];
     
     if (soloRecetas) {
-      console.log('🎯 Aplicando filtro de recetas en frontend');
+      console.log('🎯 Aplicando filtro: SOLO recetas');
       productosFiltrados = productosFiltrados.filter(producto => {
         const esReceta = (producto.inv_categorias as any)?.isreceta === 1;
         console.log(`Producto ${producto.nombre}: esReceta = ${esReceta}`);
         return esReceta;
+      });
+    } else {
+      console.log('🎯 Aplicando filtro: SOLO productos (NO recetas)');
+      productosFiltrados = productosFiltrados.filter(producto => {
+        const esReceta = (producto.inv_categorias as any)?.isreceta === 1;
+        console.log(`Producto ${producto.nombre}: esReceta = ${esReceta}`);
+        return !esReceta; // Solo productos que NO son recetas
       });
     }
 

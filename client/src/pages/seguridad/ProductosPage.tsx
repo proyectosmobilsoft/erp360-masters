@@ -69,6 +69,7 @@ import { TipoFormComponent } from './TiposPage';
 import { LineaFormComponent } from './LineasPage';
 import { SublineaFormComponent } from './SublineasPage';
 import { MedidaFormComponent } from './MedidasPage';
+import { PresentacionMedidaFormComponent } from './PresentacionMedidasPage';
 
 // Image Upload Component
 interface ImageUploadProps {
@@ -152,10 +153,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
   return (
     <div
       className={`w-full h-full border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-colors ${isDragOver
-        ? 'border-cyan-500 bg-cyan-50'
-        : value
-          ? 'border-gray-300 bg-white'
-          : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
+          ? 'border-cyan-500 bg-cyan-50'
+          : value
+            ? 'border-gray-300 bg-white'
+            : 'border-gray-300 bg-gray-50 hover:bg-gray-100'
         }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -306,7 +307,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (producto) {
       console.log('📝 Valores del producto:');
       console.log('  - tipo_menu:', producto.tipo_menu);
-
+      
       setFormData(prev => {
         console.log('🔄 formData anterior:', prev);
         const newFormData = {
@@ -367,6 +368,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [showLineaModal, setShowLineaModal] = useState(false);
   const [showSublineaModal, setShowSublineaModal] = useState(false);
   const [showUnidadModal, setShowUnidadModal] = useState(false);
+  const [showPresentacionModal, setShowPresentacionModal] = useState(false);
 
   // Estados para edición rápida
   const [editingCategoriaQuick, setEditingCategoriaQuick] = useState<CategoriaData | null>(null);
@@ -374,6 +376,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [editingLineaQuick, setEditingLineaQuick] = useState<LineaData | null>(null);
   const [editingSublineaQuick, setEditingSublineaQuick] = useState<SublineaDataFull | null>(null);
   const [editingUnidadQuick, setEditingUnidadQuick] = useState<MedidaData | null>(null);
+  const [editingPresentacionQuick, setEditingPresentacionQuick] = useState<PresentacionMedidaData | null>(null);
 
   // Estados para formularios de creación rápida
   const [quickCreateForm, setQuickCreateForm] = useState({
@@ -383,7 +386,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     sublinea: { codigo: '', nombre: '', id_linea: 0 },
     unidad: { codigo: '', nombre: '', abreviatura: '', clase_medida: '', cantidad: 1, val_excedente: 0 }
   });
-
+  
   // Función para calcular totales de ingredientes
   const calcularTotalesIngredientes = (ingredientesList: any[]) => {
     // Separar productos y recetas
@@ -391,7 +394,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       const producto = productos.find(p => p.id === ing.id_producto);
       return producto && (!producto.id_clase_servicio || producto.id_clase_servicio === 0);
     });
-
+    
     const recetasIngredientes = ingredientesList.filter(ing => {
       const producto = productos.find(p => p.id === ing.id_producto);
       return producto && producto.id_clase_servicio && producto.id_clase_servicio > 0;
@@ -410,8 +413,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       totalPorciones: totalRecetas // Total de todas las recetas (suma de sus ingredientes)
     };
   };
-
-
+  
+  
   // Refs para mantener referencias a los valores actuales
   const tiempoPreparacionRef = React.useRef<string>("00:00:00");
   const utilidadesProductoRef = React.useRef<UtilidadProducto>({
@@ -423,19 +426,19 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     nota: "",
     estado: 1
   });
-
+  
   // Actualizar refs cuando cambien los valores
   React.useEffect(() => {
     tiempoPreparacionRef.current = tiempoPreparacion;
     console.log('🔄 tiempoPreparacion actualizado:', tiempoPreparacion);
   }, [tiempoPreparacion]);
-
+  
   React.useEffect(() => {
     utilidadesProductoRef.current = utilidadesProducto;
     console.log('🔄 utilidadesProducto actualizado:', utilidadesProducto);
   }, [utilidadesProducto]);
-
-
+  
+  
   // Funciones para convertir entre formato de tiempo y minutos
   const minutosATiempo = (minutos: number): string => {
     const horas = Math.floor(minutos / 60);
@@ -443,17 +446,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     const segundos = 0; // Esta función es para convertir minutos a tiempo, no para preservar segundos
     return `${horas.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
   };
-
+  
   const tiempoAMinutos = (tiempo: string): number => {
     const [horas, minutos] = tiempo.split(':').map(Number);
     return horas * 60 + minutos;
   };
-
-
+  
+  
   // Función para formatear tiempo correctamente
   const formatearTiempo = (tiempo: string): string => {
     if (!tiempo) return "00:00:00";
-
+    
     const partes = tiempo.split(':');
     if (partes.length === 2) {
       // Si solo tiene horas y minutos, agregar segundos
@@ -480,19 +483,19 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   //     });
   //   }
   // };
-
+  
   // Función para guardar utilidades con valores actuales
   const saveUtilidadesWithCurrentValues = async (idProducto: number) => {
     try {
       const tiempoActual = tiempoPreparacionRef.current;
       const notaActual = utilidadesProductoRef.current.nota;
-
+      
       console.log('🔍 Valores capturados para utilidades:', {
         tiempoPreparacion: tiempoActual,
         nota: notaActual,
         esReceta: esReceta
       });
-
+      
       await productosService.saveOrUpdateProductoUtilidades(idProducto, {
         id_producto: idProducto,
         id_indicie_dificultad: 1,
@@ -502,7 +505,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         nota: notaActual,
         estado: 1
       });
-
+      
       console.log('✅ Utilidades guardadas correctamente:', {
         id_producto: idProducto,
         tiempo_preparacion: tiempoActual,
@@ -542,14 +545,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       console.log('🍳 Calculando costo total de ingredientes de la receta...');
       const ingredientesReceta = await productosService.getProductoIngredientes(idProducto);
       console.log('📋 Ingredientes de la receta:', ingredientesReceta);
-
+      
       // Calcular costo total de los ingredientes
       const costoTotalIngredientes = ingredientesReceta.reduce((total, ingrediente) => {
         const costoIngrediente = ingrediente.cantidad * (ingrediente.costo || 0);
         console.log(`💰 Ingrediente: ${ingrediente.cantidad} x ${ingrediente.costo} = ${costoIngrediente}`);
         return total + costoIngrediente;
       }, 0);
-
+      
       console.log('💰 Costo total de ingredientes:', costoTotalIngredientes);
       return costoTotalIngredientes;
     } catch (error) {
@@ -561,14 +564,14 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   // Funciones para manejar ingredientes
   const handleIngredienteChange = async (field: string, value: any) => {
     // Si se selecciona un producto, manejar lógica async primero
-    if (field === 'id_producto') {
-      const productoSeleccionado = productos.find(p => p.id === parseInt(value));
-      if (productoSeleccionado) {
+      if (field === 'id_producto') {
+        const productoSeleccionado = productos.find(p => p.id === parseInt(value));
+        if (productoSeleccionado) {
         // Verificar si el producto es una receta (tiene id_clase_servicio)
         const esReceta = productoSeleccionado.id_clase_servicio && productoSeleccionado.id_clase_servicio > 0;
-
+        
         let costoCalculado = productoSeleccionado.ultimo_costo || 0;
-
+        
         // Si es receta, calcular costo total de ingredientes
         if (esReceta) {
           costoCalculado = await calcularCostoReceta(productoSeleccionado.id);
@@ -577,33 +580,33 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
             costoCalculado = productoSeleccionado.ultimo_costo || 0;
           }
         }
-
+        
         // Ahora actualizar el estado con toda la información
         setIngredienteForm(prev => {
           const newForm = { ...prev, [field]: value };
-
+          
           newForm.costo_unitario = costoCalculado;
           setCostoInputValue(costoCalculado > 0 ? costoCalculado.toString() : '0.00');
-
+          
           // IMPORTANTE: Limpiar el campo unidad al seleccionar un nuevo producto
           console.log('🧹 Limpiando campo unidad al seleccionar nuevo producto');
           newForm.unidad = "";
-
+          
           if (esReceta) {
             // Si es receta: cantidad = 1, unidad = unidad del producto, campos deshabilitados
             newForm.cantidad = 1;
             newForm.es_receta = true; // Flag para deshabilitar campos
-
+            
             // IMPORTANTE: Para recetas, RESETEAR y cargar TODAS las medidas para asegurar que la unidad correcta esté disponible
             console.log('🔄 Reseteando medidasFiltradas para receta');
             const todasLasMedidas = medidas.filter(m => m.estado === 1);
             setMedidasFiltradas(todasLasMedidas);
-
+            
             // Buscar la medida del producto receta
             const medidaProductoReceta = medidas.find(m => m.id === productoSeleccionado.id_medida);
             const unidadReceta = medidaProductoReceta?.abreviatura || "";
             newForm.unidad = unidadReceta;
-
+            
             console.log('🍳 Producto es receta, cargando TODAS las medidas:', {
               productoReceta: productoSeleccionado.nombre,
               id_medida_producto: productoSeleccionado.id_medida,
@@ -623,50 +626,50 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           } else {
             // Si no es receta: comportamiento normal (lógica original)
             newForm.es_receta = false;
-
-            // Filtrar medidas por la clase de medida del producto seleccionado
-            const medidaProducto = medidas.find(m => m.id === productoSeleccionado.id_medida);
-
-            if (medidaProducto && medidaProducto.clase_medida) {
+          
+          // Filtrar medidas por la clase de medida del producto seleccionado
+          const medidaProducto = medidas.find(m => m.id === productoSeleccionado.id_medida);
+            
+          if (medidaProducto && medidaProducto.clase_medida) {
               // Filtrar medidas que tengan la misma clase_medida
-              const medidasFiltradas = medidas.filter(m =>
-                m.clase_medida === medidaProducto.clase_medida && m.estado === 1
-              );
+            const medidasFiltradas = medidas.filter(m => 
+              m.clase_medida === medidaProducto.clase_medida && m.estado === 1
+            );
               console.log('🔍 Filtrando medidas por clase:', {
                 medidaProducto,
                 clase_medida: medidaProducto.clase_medida,
                 medidasFiltradas,
                 totalMedidas: medidas.length
               });
-              setMedidasFiltradas(medidasFiltradas);
-            } else {
-              // Si no hay clase de medida, mostrar todas las medidas activas
+            setMedidasFiltradas(medidasFiltradas);
+          } else {
+            // Si no hay clase de medida, mostrar todas las medidas activas
               console.log('⚠️ No hay clase_medida, mostrando todas las medidas:', {
                 medidaProducto,
                 medidasActivas: medidas.filter(m => m.estado === 1).length
               });
-              setMedidasFiltradas(medidas.filter(m => m.estado === 1));
-            }
+            setMedidasFiltradas(medidas.filter(m => m.estado === 1));
           }
-
+          }
+          
           // Calcular total inmediatamente al seleccionar producto
           newForm.total = newForm.cantidad * newForm.costo_unitario;
           return newForm;
         });
-
+        
         return; // Salir temprano para evitar el setState duplicado
       }
     }
-
+    
     // Para otros campos, usar lógica normal
     setIngredienteForm(prev => {
       const newForm = { ...prev, [field]: value };
-
+      
       // Calcular total automáticamente
       if (field === 'cantidad' || field === 'costo_unitario') {
         newForm.total = newForm.cantidad * newForm.costo_unitario;
       }
-
+      
       return newForm;
     });
   };
@@ -725,15 +728,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         ...ingredienteForm,
         nombre_producto: productos.find(p => p.id === ingredienteForm.id_producto)?.nombre || 'Producto'
       };
-
+      
       const nuevosIngredientes = [...ingredientes, nuevoIngrediente];
       setIngredientes(nuevosIngredientes);
-
+      
       // Calcular totales actualizados
       const totales = calcularTotalesIngredientes(nuevosIngredientes);
       setTotalIngredientes(totales.totalProductos);
       setTotalPorciones(totales.totalPorciones);
-
+      
       // Limpiar formulario
       setIngredienteForm({
         id_producto: 0,
@@ -750,7 +753,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const handleEliminarIngrediente = (id: number) => {
     const ingredientesActualizados = ingredientes.filter(i => i.id !== id);
     setIngredientes(ingredientesActualizados);
-
+    
     // Recalcular totales
     const totales = calcularTotalesIngredientes(ingredientesActualizados);
     setTotalIngredientes(totales.totalProductos);
@@ -785,7 +788,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (formData.id_categoria && categorias.length > 0) {
       const categoriaSeleccionada = categorias.find(cat => cat.id === formData.id_categoria);
       const nuevaEsReceta = categoriaSeleccionada?.isreceta === 1;
-
+      
       // Cambiar el tab activo según si es receta o no
       if (nuevaEsReceta) {
         setActiveFormTab("ingredientes");
@@ -809,8 +812,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       // Solo resetear tiempo y tipo_menu si NO estamos editando
       if (!editingProducto) {
         console.log('🔄 Reseteando campos porque NO estamos editando');
-        setFormData(prev => ({
-          ...prev,
+        setFormData(prev => ({ 
+          ...prev, 
           tiempo: 0, // Reset tiempo de preparación
           tipo_menu: "" // Reset tipo de menú
         }));
@@ -827,18 +830,18 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     if (formData.id_categoria && categorias.length > 0) {
       const categoriaSeleccionada = categorias.find(cat => cat.id === formData.id_categoria);
       const nuevaEsReceta = categoriaSeleccionada?.isreceta === 1;
-
+      
       console.log('🔍 Categoría cambiada:', {
         id_categoria: formData.id_categoria,
         categoria: categoriaSeleccionada?.nombre,
         isreceta: categoriaSeleccionada?.isreceta,
         nuevaEsReceta
       });
-
+      
       // Notificar al componente padre sobre el cambio
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('categoriaChanged', {
-          detail: { esReceta: nuevaEsReceta }
+        window.dispatchEvent(new CustomEvent('categoriaChanged', { 
+          detail: { esReceta: nuevaEsReceta } 
         }));
       }
     }
@@ -903,22 +906,22 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       if (lineas.length > 0 && sublineas.length > 0) {
         // Filtrar líneas por categoría
         const lineasDeCategoria = lineas.filter(l => l.id_categoria === idCategoria);
-
+        
         // Buscar la línea específica que necesitamos
         const lineaEspecifica = lineas.find(l => l.id === idLinea);
-
+        
         // En modo edición, incluir la línea específica del producto aunque no pertenezca a la categoría
         let lineasFinales = lineasDeCategoria;
         if (editingProducto && lineaEspecifica && !lineasDeCategoria.find(l => l.id === idLinea)) {
           lineasFinales = [lineaEspecifica, ...lineasDeCategoria];
         }
-
+        
         setLineasFiltradas(lineasFinales);
-
+        
         // Filtrar sublíneas por línea
         const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === idLinea);
         setSublineasFiltradas(sublineasDeLinea);
-
+        
         // Establecer valores con timeout para asegurar que los selects estén listos
         setTimeout(() => {
           setFormData(prev => ({
@@ -942,11 +945,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
       // Solo resetear línea y sublínea si NO estamos editando
       if (!editingProducto) {
-        setFormData(prev => ({
-          ...prev,
-          id_linea: 0,
-          id_sublineas: 0
-        }));
+      setFormData(prev => ({
+        ...prev,
+        id_linea: 0,
+        id_sublineas: 0
+      }));
       }
     } else if (!editingProducto) {
       setLineasFiltradas([]);
@@ -961,10 +964,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       if (lineaEspecifica) {
         // Obtener líneas de la categoría del producto
         const lineasDeCategoria = lineas.filter(l => l.id_categoria === formData.id_categoria);
-
+        
         // Crear lista final: línea específica + líneas de categoría (sin duplicados)
         const lineasFinales = [lineaEspecifica, ...lineasDeCategoria.filter(l => l.id !== formData.id_linea)];
-
+        
         setLineasFiltradas(lineasFinales);
       }
     }
@@ -973,8 +976,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   // Filtrar sublíneas cuando cambie la línea (solo en modo creación)
   React.useEffect(() => {
     if (!editingProducto && formData.id_linea && formData.id_linea > 0 && sublineas.length > 0) {
-      const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
-      setSublineasFiltradas(sublineasDeLinea);
+        const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === formData.id_linea);
+        setSublineasFiltradas(sublineasDeLinea);
 
       // Resetear sublínea cuando cambie la línea en modo creación con timeout
       setTimeout(() => {
@@ -984,7 +987,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         }));
       }, 50);
     } else if (!editingProducto) {
-      setSublineasFiltradas([]);
+        setSublineasFiltradas([]);
     }
   }, [formData.id_linea, sublineas, editingProducto]);
 
@@ -1016,9 +1019,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
             total: ing.cantidad * (ing.costo || 0),
             nombre_producto: productos.find(p => p.id === ing.id_producto)?.nombre || 'Producto'
           }));
-
+          
           setIngredientes(ingredientesFormateados);
-
+          
           // Recalcular totales
           const totalIng = ingredientesFormateados.reduce((sum, ing) => sum + ing.total, 0);
           setTotalIngredientes(totalIng);
@@ -1027,7 +1030,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         .catch(error => {
           console.error('Error cargando ingredientes:', error);
         });
-
+        
       // Cargar utilidades existentes
       productosService.getProductoUtilidades(editingProducto.id)
         .then(utilidadesExistentes => {
@@ -1045,7 +1048,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       setIngredientes([]);
       setTotalIngredientes(0);
       setTotalPorciones(0);
-
+      
       // Limpiar utilidades en modo creación
       onUtilidadesProductoChange({
         id_producto: 0,
@@ -1126,7 +1129,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         if (!empaque.factor || empaque.factor.trim() === '') {
           return false;
         }
-
+        
         const presentacionId = presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id;
         if (!presentacionId) {
           console.warn(`No se encontró presentación para tipo: ${empaque.tipo}`);
@@ -1137,7 +1140,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       .map(empaque => ({
         id_presentacion: presentacionesMedidas.find(p => p.nombre === empaque.tipo)?.id!,
         factor: parseFloat(empaque.factor),
-        descripcion: empaque.descripcion
+      descripcion: empaque.descripcion
       })) : [];
 
     // Convertir ingredientes al formato esperado por el servicio
@@ -1154,7 +1157,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         if (!ingrediente.cantidad || ingrediente.cantidad <= 0) {
           return false;
         }
-
+        
         const medidaId = medidas.find(m => m.abreviatura === ingrediente.unidad)?.id;
         if (!medidaId) {
           console.warn(`No se encontró medida para unidad: ${ingrediente.unidad}`);
@@ -1220,16 +1223,16 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
       // Solo resetear en modo creación, no en edición
       if (!editingProducto) {
-        // Si cambia la categoría, resetear línea y sublínea
-        if (field === 'id_categoria') {
-          newData.id_linea = undefined;
-          newData.id_sublineas = 0;
+      // Si cambia la categoría, resetear línea y sublínea
+      if (field === 'id_categoria') {
+        newData.id_linea = undefined;
+        newData.id_sublineas = 0;
           setCodigoGenerado(""); // Limpiar código generado
-        }
+      }
 
-        // Si cambia la línea, resetear sublínea
-        if (field === 'id_linea') {
-          newData.id_sublineas = 0;
+      // Si cambia la línea, resetear sublínea
+      if (field === 'id_linea') {
+        newData.id_sublineas = 0;
           setCodigoGenerado(""); // Limpiar código generado
         }
       }
@@ -1244,7 +1247,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       // Obtener códigos de línea y sublínea
       const linea = lineas.find(l => l.id === idLinea);
       const sublinea = sublineas.find(s => s.id === idSublinea);
-
+      
       if (!linea || !sublinea) {
         return "";
       }
@@ -1252,7 +1255,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       // Obtener el siguiente consecutivo para esta combinación
       const consecutivo = await productosService.getConsecutivoProducto(linea.codigo, sublinea.codigo);
       const codigoGenerado = `${linea.codigo}${sublinea.codigo}${consecutivo.toString().padStart(3, '0')}`;
-
+      
       return codigoGenerado;
     } catch (error) {
       console.error('Error generando código:', error);
@@ -1298,8 +1301,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       if (medida && medida.abreviatura) {
         const descripcion = `${tipo} X ${factor}${medida.abreviatura}`;
         setEmpaqueForm(prev => ({
-          ...prev,
-          descripcion
+            ...prev,
+            descripcion
         }));
       }
     }
@@ -1387,7 +1390,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       if (tipo.estado !== 1) {
         return false;
       }
-
+      
       // Filtrar por es_receta según el contexto
       if (esReceta) {
         return tipo.es_receta === true;
@@ -1654,6 +1657,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [isCreatingLinea, setIsCreatingLinea] = useState(false);
   const [isCreatingSublinea, setIsCreatingSublinea] = useState(false);
   const [isCreatingUnidad, setIsCreatingUnidad] = useState(false);
+  const [isCreatingPresentacion, setIsCreatingPresentacion] = useState(false);
 
   // Funciones para creación/edición rápida usando los componentes reutilizables
   const handleQuickCreateCategoriaSubmit = async (data: any) => {
@@ -1968,8 +1972,59 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     }
   };
 
+  const handleQuickCreatePresentacionSubmit = async (data: any) => {
+    setIsCreatingPresentacion(true);
+    try {
+      let presentacionResultado;
+      
+      if (editingPresentacionQuick && editingPresentacionQuick.id) {
+        // Editar presentación existente
+        presentacionResultado = await presentacionMedidasService.updatePresentacionMedida(editingPresentacionQuick.id, {
+          nombre: data.nombre,
+          id_medida: data.id_medida,
+        });
+        
+        toast({
+          title: '✅ Presentación actualizada',
+          description: `La presentación "${presentacionResultado.nombre}" ha sido actualizada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nueva presentación
+        presentacionResultado = await presentacionMedidasService.createPresentacionMedida({
+          nombre: data.nombre,
+          id_medida: data.id_medida,
+        });
+        
+        toast({
+          title: '✅ Presentación creada',
+          description: `La presentación "${presentacionResultado.nombre}" ha sido creada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["presentacionesMedidas"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowPresentacionModal(false);
+      setEditingPresentacionQuick(null);
+      
+    } catch (error) {
+      console.error('Error con presentación:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingPresentacionQuick ? 'actualizar' : 'crear'} la presentación. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingPresentacion(false);
+    }
+  };
+
   return (
-    <div className="bg-white rounded-lg border shadow-lg">
+    <div className="bg-white rounded-lg border shadow-lg overflow-x-hidden">
       {/* Header del formulario */}
       <div className="flex items-center gap-2 p-6 border-b bg-gradient-to-r from-cyan-50 to-blue-50">
         <Package className="w-5 h-5 text-cyan-600" />
@@ -1978,7 +2033,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         </h2>
       </div>
 
-      <div className="p-3">
+      <div className="p-3 overflow-x-hidden">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Layout principal: dos columnas más compacto */}
           <div className="grid grid-cols-12 gap-4">
@@ -2013,15 +2068,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <Label htmlFor="id_categoria" className="text-sm font-medium">Categoria</Label>
                     </div>
                     <div className="flex gap-1">
-                      <Select
-                        value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
-                        onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                          <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categoriasOrdenadas.map((categoria) => (
+                    <Select
+                      value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriasOrdenadas.map((categoria) => (
                             <SelectItem key={categoria.id} value={categoria.id.toString()} className="text-xs group relative">
                               <div className="flex items-center justify-between w-full pr-6">
                                 <span className="flex-1">{categoria.nombre}</span>
@@ -2040,10 +2095,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                   <Edit className="h-3 w-3 text-blue-600" />
                                 </Button>
                               </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2073,15 +2128,15 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <Label htmlFor="id_tipo_producto" className="text-sm font-medium">Tipo Producto</Label>
                     </div>
                     <div className="flex gap-1">
-                      <Select
-                        value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
-                        onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                          <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {tiposFiltrados.map((tipo) => (
+                    <Select
+                      value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {tiposFiltrados.map((tipo) => (
                             <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"} className="text-xs group relative">
                               <div className="flex items-center justify-between w-full pr-6">
                                 <span className="flex-1">{tipo.nombre}</span>
@@ -2100,10 +2155,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                   <Edit className="h-3 w-3 text-blue-600" />
                                 </Button>
                               </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2136,25 +2191,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <Label htmlFor="id_linea" className="text-sm font-medium">Línea</Label>
                     </div>
                     <div className="flex gap-1">
-                      <Select
-                        value={formData.id_linea?.toString() || "0"}
-                        onValueChange={(value) => handleInputChange('id_linea', parseInt(value))}
-                        disabled={lineasFiltradas.length === 0}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                          <SelectValue placeholder={
-                            lineasFiltradas.length === 0
-                              ? "Seleccione una categoría primero"
-                              : "Seleccionar línea"
-                          } className="text-gray-400" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {lineasFiltradas.length === 0 ? (
+                    <Select
+                      value={formData.id_linea?.toString() || "0"}
+                      onValueChange={(value) => handleInputChange('id_linea', parseInt(value))}
+                      disabled={lineasFiltradas.length === 0}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder={
+                          lineasFiltradas.length === 0
+                            ? "Seleccione una categoría primero"
+                            : "Seleccionar línea"
+                        } className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lineasFiltradas.length === 0 ? (
                             <SelectItem value="0" disabled className="text-xs">
-                              No hay líneas disponibles
-                            </SelectItem>
-                          ) : (
-                            lineasFiltradas.map((linea) => (
+                            No hay líneas disponibles
+                          </SelectItem>
+                        ) : (
+                          lineasFiltradas.map((linea) => (
                               <SelectItem key={linea.id} value={linea.id?.toString() || "0"} className="text-xs group relative">
                                 <div className="flex items-center justify-between w-full pr-6">
                                   <span className="flex-1">{linea.nombre}</span>
@@ -2173,11 +2228,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                     <Edit className="h-3 w-3 text-blue-600" />
                                   </Button>
                                 </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2208,25 +2263,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea</Label>
                     </div>
                     <div className="flex gap-1">
-                      <Select
-                        value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
-                        onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
-                        disabled={sublineasFiltradas.length === 0}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                          <SelectValue placeholder={
-                            sublineasFiltradas.length === 0
-                              ? "Seleccione una línea primero"
-                              : "Seleccionar sublínea"
-                          } className="text-gray-400" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sublineasFiltradas.length === 0 ? (
+                    <Select
+                      value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
+                      disabled={sublineasFiltradas.length === 0}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder={
+                          sublineasFiltradas.length === 0
+                            ? "Seleccione una línea primero"
+                            : "Seleccionar sublínea"
+                        } className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sublineasFiltradas.length === 0 ? (
                             <SelectItem value="0" disabled className="text-xs">
-                              No hay sublíneas disponibles
-                            </SelectItem>
-                          ) : (
-                            sublineasFiltradas.map((sublinea) => (
+                            No hay sublíneas disponibles
+                          </SelectItem>
+                        ) : (
+                          sublineasFiltradas.map((sublinea) => (
                               <SelectItem key={sublinea.id} value={sublinea.id.toString()} className="text-xs group relative">
                                 <div className="flex items-center justify-between w-full pr-6">
                                   <span className="flex-1">{sublinea.nombre}</span>
@@ -2245,11 +2300,11 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                     <Edit className="h-3 w-3 text-blue-600" />
                                   </Button>
                                 </div>
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -2278,20 +2333,20 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
 
                 {/* Tercera fila de características - Solo para productos normales */}
                 {!esReceta && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="id_medida" className="text-sm font-medium">Unidad</Label>
-                      </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="id_medida" className="text-sm font-medium">Unidad</Label>
+                    </div>
                       <div className="flex gap-1">
-                        <Select
-                          value={formData.id_medida && formData.id_medida > 0 ? formData.id_medida.toString() : ""}
-                          onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
-                        >
-                          <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                            <SelectValue placeholder="Seleccionar unidad" className="text-gray-400" />
-                          </SelectTrigger>
-                          <SelectContent>
+                    <Select
+                      value={formData.id_medida && formData.id_medida > 0 ? formData.id_medida.toString() : ""}
+                      onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
+                    >
+                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                        <SelectValue placeholder="Seleccionar unidad" className="text-gray-400" />
+                      </SelectTrigger>
+                      <SelectContent>
                             {medidas.filter(medida => medida.estado === 1).map((medida) => (
                               <SelectItem key={medida.id} value={medida.id.toString()} className="text-xs group relative">
                                 <div className="flex items-center justify-between w-full pr-6">
@@ -2311,10 +2366,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                     <Edit className="h-3 w-3 text-blue-600" />
                                   </Button>
                                 </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -2337,21 +2392,21 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           </Tooltip>
                         </TooltipProvider>
                       </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        <Label htmlFor="referencia" className="text-sm font-medium">Referencia</Label>
-                      </div>
-                      <Input
-                        id="referencia"
-                        value={formData.referencia || ""}
-                        onChange={(e) => handleInputChange('referencia', e.target.value)}
-                        className="h-8 text-sm bg-yellow-25"
-                        autoComplete="off"
-                      />
-                    </div>
                   </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center">
+                      <Label htmlFor="referencia" className="text-sm font-medium">Referencia</Label>
+                    </div>
+                    <Input
+                      id="referencia"
+                      value={formData.referencia || ""}
+                      onChange={(e) => handleInputChange('referencia', e.target.value)}
+                      className="h-8 text-sm bg-yellow-25"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
                 )}
               </div>
 
@@ -2376,51 +2431,51 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
               {/* IMAGEN y CHECKBOXES - Solo para productos normales */}
               {!esReceta && (
                 <>
-                  {/* IMAGEN - más compacto */}
-                  <div className="space-y-1">
-                    <div className="flex items-center">
-                      <Label className="text-sm font-medium">IMAGEN</Label>
-                    </div>
-                    <div className="h-32">
-                      <ImageUpload
+              {/* IMAGEN - más compacto */}
+              <div className="space-y-1">
+                <div className="flex items-center">
+                  <Label className="text-sm font-medium">IMAGEN</Label>
+                </div>
+                <div className="h-32">
+                  <ImageUpload
                         value={formData.imgbase64}
                         onChange={(value) => handleInputChange('imgbase64', value)}
-                      />
-                    </div>
-                  </div>
+                  />
+                </div>
+              </div>
 
-                  {/* Checkboxes - debajo de la imagen */}
-                  <div className="space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <input
-                        id="controla_existencia"
-                        type="checkbox"
-                        checked={formData.controla_existencia === 1}
-                        onChange={(e) => handleInputChange('controla_existencia', e.target.checked ? 1 : 0)}
-                        className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
-                      />
-                      <div className="flex items-center">
-                        <Label htmlFor="controla_existencia" className="text-sm font-medium">
-                          Controla Existencia
-                        </Label>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <input
-                        id="controla_lotes"
-                        type="checkbox"
-                        checked={formData.controla_lotes === 1}
-                        onChange={(e) => handleInputChange('controla_lotes', e.target.checked ? 1 : 0)}
-                        className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
-                      />
-                      <div className="flex items-center">
-                        <Label htmlFor="controla_lotes" className="text-sm font-medium">
-                          Controla Lotes
-                        </Label>
-                      </div>
-                    </div>
+              {/* Checkboxes - debajo de la imagen */}
+              <div className="space-y-1">
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="controla_existencia"
+                    type="checkbox"
+                    checked={formData.controla_existencia === 1}
+                    onChange={(e) => handleInputChange('controla_existencia', e.target.checked ? 1 : 0)}
+                    className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                  />
+                  <div className="flex items-center">
+                    <Label htmlFor="controla_existencia" className="text-sm font-medium">
+                      Controla Existencia
+                    </Label>
                   </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    id="controla_lotes"
+                    type="checkbox"
+                    checked={formData.controla_lotes === 1}
+                    onChange={(e) => handleInputChange('controla_lotes', e.target.checked ? 1 : 0)}
+                    className="h-4 w-4 text-cyan-600 focus:ring-cyan-500 border-gray-300 rounded"
+                  />
+                  <div className="flex items-center">
+                    <Label htmlFor="controla_lotes" className="text-sm font-medium">
+                      Controla Lotes
+                    </Label>
+                  </div>
+                </div>
+              </div>
                 </>
               )}
 
@@ -2428,7 +2483,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
               {esReceta && (
                 <div className="relative overflow-hidden rounded-lg border border-orange-200 shadow-md">
                   {/* Imagen de fondo de ingredientes de cocina */}
-                  <div
+                  <div 
                     className="absolute inset-0 bg-center bg-no-repeat"
                     style={{
                       backgroundImage: `url('/src/assets/img/fondo-recetas.jpg')`,
@@ -2557,22 +2612,22 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   </>
                 ) : (
                   <>
-                    <TabsTrigger
+                <TabsTrigger
                       value="empaques"
-                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
-                    >
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
                       Empaques Asociados
-                    </TabsTrigger>
-                    <TabsTrigger
+                </TabsTrigger>
+                <TabsTrigger
                       value="precio"
-                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
-                    >
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
                       Precio y Existencias
-                    </TabsTrigger>
-                    <TabsTrigger
+                </TabsTrigger>
+                <TabsTrigger
                       value="contable"
-                      className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
-                    >
+                  className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
+                >
                       Interfaz Contable
                     </TabsTrigger>
                     <TabsTrigger
@@ -2580,7 +2635,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       className="text-xs data-[state=active]:bg-cyan-600 data-[state=active]:text-white data-[state=active]:shadow-md rounded-md transition-all duration-300"
                     >
                       Historia del Producto
-                    </TabsTrigger>
+                </TabsTrigger>
                   </>
                 )}
               </TabsList>
@@ -2590,65 +2645,65 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                   {/* Columna izquierda - Costos e Inventario */}
                   <div className="col-span-6 space-y-2">
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="ultimo_costo"
-                            type="text"
-                            value={formatCurrencyDisplay(ultimoCostoDisplay)}
-                            onChange={handleUltimoCostoChange}
-                            onFocus={handleUltimoCostoFocus}
-                            onBlur={handleUltimoCostoBlur}
-                            className="h-8 text-sm pl-8 bg-yellow-25"
-                            autoComplete="off"
-                          />
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="ultimo_costo" className="text-sm font-medium">Último Costo</Label>
                       </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="ultimo_costo"
+                          type="text"
+                          value={formatCurrencyDisplay(ultimoCostoDisplay)}
+                          onChange={handleUltimoCostoChange}
+                          onFocus={handleUltimoCostoFocus}
+                          onBlur={handleUltimoCostoBlur}
+                          className="h-8 text-sm pl-8 bg-yellow-25"
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="costo_promedio"
-                            type="text"
-                            value={formatCurrencyDisplay(costoPromedioDisplay)}
-                            onChange={handleCostoPromedioChange}
-                            onFocus={handleCostoPromedioFocus}
-                            onBlur={handleCostoPromedioBlur}
-                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                            autoComplete="off"
-                            disabled
-                          />
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="costo_promedio" className="text-sm font-medium">Costo Promedio</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="costo_promedio"
+                          type="text"
+                          value={formatCurrencyDisplay(costoPromedioDisplay)}
+                          onChange={handleCostoPromedioChange}
+                          onFocus={handleCostoPromedioFocus}
+                          onBlur={handleCostoPromedioBlur}
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                          autoComplete="off"
+                          disabled
+                        />
                         </div>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
-                        </div>
-                        <Input
-                          id="existencia_actual"
-                          type="number"
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="existencia_actual" className="text-sm font-medium">Existencia</Label>
+                      </div>
+                      <Input
+                        id="existencia_actual"
+                        type="number"
                           value="0"
                           className="h-8 text-sm bg-gray-100 text-gray-400"
-                          autoComplete="off"
+                        autoComplete="off"
                           disabled
-                        />
-                      </div>
+                      />
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
-                        </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="frecuencia_compra" className="text-sm font-medium">Frecuencia</Label>
+                      </div>
                         <Select
                           value={formData.frecuencia || "semanal"}
                           onValueChange={(value) => handleInputChange('frecuencia', value)}
@@ -2663,25 +2718,25 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             <SelectItem value="trimestral">Trimestral</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
+                    </div>
 
-                      <div className="space-y-1">
-                        <div className="flex items-center">
-                          <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
-                        </div>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
-                          <Input
-                            id="precio_publico"
-                            type="text"
-                            value={formatCurrencyDisplay(precioPublicoDisplay)}
-                            onChange={handlePrecioPublicoChange}
-                            onFocus={handlePrecioPublicoFocus}
-                            onBlur={handlePrecioPublicoBlur}
-                            className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
-                            autoComplete="off"
-                            disabled
-                          />
+                    <div className="space-y-1">
+                      <div className="flex items-center">
+                        <Label htmlFor="precio_publico" className="text-sm font-medium">Precio Público</Label>
+                      </div>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 text-sm">$</span>
+                        <Input
+                          id="precio_publico"
+                          type="text"
+                          value={formatCurrencyDisplay(precioPublicoDisplay)}
+                          onChange={handlePrecioPublicoChange}
+                          onFocus={handlePrecioPublicoFocus}
+                          onBlur={handlePrecioPublicoBlur}
+                          className="h-8 text-sm pl-8 bg-gray-100 text-gray-400"
+                          autoComplete="off"
+                          disabled
+                        />
                         </div>
                       </div>
                     </div>
@@ -2939,6 +2994,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <div className="flex items-center">
                         <Label className="text-sm font-medium">Tipo Presentación</Label>
                       </div>
+                      <div className="flex gap-1">
                       <Select
                         value={empaqueForm.tipo}
                         onValueChange={handleEmpaqueTipoChange}
@@ -2953,7 +3009,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                         </SelectTrigger>
                         <SelectContent>
                           {presentacionesFiltradas.length === 0 ? (
-                            <SelectItem value="0" disabled>
+                              <SelectItem value="0" disabled className="text-xs">
                               {!formData.id_medida || formData.id_medida === 0
                                 ? "Seleccione una unidad primero"
                                 : "No hay presentaciones disponibles"
@@ -2961,13 +3017,52 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             </SelectItem>
                           ) : (
                             presentacionesFiltradas.map((presentacion: PresentacionMedidaData) => (
-                              <SelectItem key={presentacion.id} value={presentacion.nombre}>
-                                {presentacion.nombre}
+                                <SelectItem key={presentacion.id} value={presentacion.nombre} className="text-xs group relative">
+                                  <div className="flex items-center justify-between w-full pr-6">
+                                    <span className="flex-1">{presentacion.nombre}</span>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                      onMouseDown={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        setEditingPresentacionQuick(presentacion);
+                                        setShowPresentacionModal(true);
+                                      }}
+                                    >
+                                      <Edit className="h-3 w-3 text-blue-600" />
+                                    </Button>
+                                  </div>
                               </SelectItem>
                             ))
                           )}
                         </SelectContent>
                       </Select>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                                onClick={() => {
+                                  setEditingPresentacionQuick(null);
+                                  setShowPresentacionModal(true);
+                                }}
+                                disabled={!formData.id_medida || formData.id_medida === 0}
+                              >
+                                <PlusCircle className="h-4 w-4 text-cyan-600" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>{!formData.id_medida || formData.id_medida === 0 ? 'Seleccione una unidad primero' : 'Crear nueva presentación'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
                     <div className="col-span-2 space-y-1">
                       <div className="flex items-center">
@@ -3088,17 +3183,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                       {productos
                                         .filter(producto => producto.estado === 1)
                                         .map((producto) => (
-                                          <CommandItem
-                                            key={producto.id}
-                                            value={producto.nombre}
-                                            onSelect={() => {
-                                              handleIngredienteChange('id_producto', producto.id);
-                                              setOpenProductoSelect(false);
-                                            }}
-                                          >
-                                            {truncateText(producto.nombre, 60)}
-                                          </CommandItem>
-                                        ))}
+                                        <CommandItem
+                                          key={producto.id}
+                                          value={producto.nombre}
+                                          onSelect={() => {
+                                            handleIngredienteChange('id_producto', producto.id);
+                                            setOpenProductoSelect(false);
+                                          }}
+                                        >
+                                          {truncateText(producto.nombre, 60)}
+                                        </CommandItem>
+                                      ))}
                                     </CommandGroup>
                                   </CommandList>
                                 </Command>
@@ -3213,42 +3308,42 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 // Verificar si es una receta (tiene id_clase_servicio > 0)
                                 const productoEncontrado = productos.find(p => p.id === ingrediente.id_producto);
                                 const esReceta = productoEncontrado?.id_clase_servicio && productoEncontrado.id_clase_servicio > 0;
-
+                                
                                 return (
-                                  <div
-                                    key={ingrediente.id}
+                                <div 
+                                  key={ingrediente.id} 
                                     className={`px-3 py-1.5 border-b border-gray-200 last:border-b-0 cursor-pointer transition-colors ${esReceta
-                                        ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400'
-                                        : 'hover:bg-gray-50'
-                                      }`}
-                                    onClick={() => esReceta && onVerIngredientesRecetaFormulario(ingrediente)}
-                                    title={esReceta ? "Click para ver ingredientes de esta receta" : ""}
-                                  >
-                                    <div className="grid grid-cols-12 gap-2 items-center">
-                                      <div className="col-span-5 text-xs font-medium text-gray-900 truncate flex items-center gap-1">
-                                        {ingrediente.nombre_producto}
-                                        {esReceta && <span className="text-blue-600 text-[10px]">(Receta)</span>}
-                                      </div>
-                                      <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.cantidad}</div>
-                                      <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.unidad}</div>
-                                      <div className="col-span-2 text-xs text-gray-700">{formatCurrencyLocal(ingrediente.costo_unitario)}</div>
-                                      <div className="col-span-2 text-xs font-medium text-green-600">{formatCurrencyLocal(ingrediente.total)}</div>
-                                      <div className="col-span-1 flex justify-center">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                          onClick={(e) => {
-                                            e.stopPropagation(); // Evitar que se abra el modal al hacer click en eliminar
-                                            handleEliminarIngrediente(ingrediente.id);
-                                          }}
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
-                                      </div>
+                                      ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400' 
+                                      : 'hover:bg-gray-50'
+                                  }`}
+                                  onClick={() => esReceta && onVerIngredientesRecetaFormulario(ingrediente)}
+                                  title={esReceta ? "Click para ver ingredientes de esta receta" : ""}
+                                >
+                                  <div className="grid grid-cols-12 gap-2 items-center">
+                                    <div className="col-span-5 text-xs font-medium text-gray-900 truncate flex items-center gap-1">
+                                      {ingrediente.nombre_producto}
+                                      {esReceta && <span className="text-blue-600 text-[10px]">(Receta)</span>}
+                                    </div>
+                                    <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.cantidad}</div>
+                                    <div className="col-span-1 text-xs text-gray-700 text-center">{ingrediente.unidad}</div>
+                                    <div className="col-span-2 text-xs text-gray-700">{formatCurrencyLocal(ingrediente.costo_unitario)}</div>
+                                    <div className="col-span-2 text-xs font-medium text-green-600">{formatCurrencyLocal(ingrediente.total)}</div>
+                                    <div className="col-span-1 flex justify-center">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-5 w-5 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                        onClick={(e) => {
+                                          e.stopPropagation(); // Evitar que se abra el modal al hacer click en eliminar
+                                          handleEliminarIngrediente(ingrediente.id);
+                                        }}
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
                                     </div>
                                   </div>
+                                </div>
                                 );
                               })
                             )}
@@ -3267,13 +3362,13 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             <div className="text-xs text-gray-500">Solo productos</div>
                           </div>
                           {calcularTotalesIngredientes(ingredientes).cantidadRecetas > 0 && (
-                            <div className="text-center">
+                          <div className="text-center">
                               <div className="text-xs font-medium text-gray-600 mb-1">Total Recetas</div>
-                              <div className="text-lg font-bold text-indigo-600">
+                            <div className="text-lg font-bold text-indigo-600">
                                 ${totalPorciones.toLocaleString()}
-                              </div>
-                              <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
                             </div>
+                              <div className="text-xs text-gray-500">Suma de ingredientes de recetas</div>
+                          </div>
                           )}
                           <div className="text-center">
                             <div className="text-xs font-medium text-gray-600 mb-1">Costo Total</div>
@@ -3319,7 +3414,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="space-y-4">
                       <div className="bg-purple-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-purple-800 mb-4">Unidades de Servicio</h3>
-
+                        
                         {/* Formulario para agregar unidad de servicio */}
                         <div className="bg-white p-3 rounded-lg border border-purple-200 mb-4">
                           <div className="grid grid-cols-12 gap-3 items-end">
@@ -3342,10 +3437,10 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                   {unidadesServicio
                                     .filter(unidad => !unidadesServicioAsignadas.find(u => u.id_unidad_servicio === unidad.id))
                                     .map((unidad) => (
-                                      <SelectItem key={unidad.id} value={unidad.id.toString()}>
-                                        {unidad.nombre_servicio}
-                                      </SelectItem>
-                                    ))}
+                                    <SelectItem key={unidad.id} value={unidad.id.toString()}>
+                                      {unidad.nombre_servicio}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
                               </Select>
                             </div>
@@ -3359,7 +3454,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                                 className="h-8 text-sm bg-gray-100 text-gray-600"
                                 readOnly
                               />
-                            </div>
+                          </div>
 
                             <div className="col-span-2 flex justify-end">
                               <Button
@@ -3380,7 +3475,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                           <div className="p-3 border-b border-purple-200 bg-blue-100">
                             <h4 className="text-sm font-medium text-blue-800">Unidades Asignadas</h4>
                           </div>
-
+                          
                           {unidadesServicioAsignadas.length === 0 ? (
                             <div className="p-6 text-center text-gray-500">
                               <Package className="h-8 w-8 mx-auto mb-2 text-gray-400" />
@@ -3432,28 +3527,29 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           </div>
 
           {/* Botones */}
-          <div className="flex justify-end gap-3 pt-3">
+          <div className="flex justify-end gap-2 pt-3">
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isLoading}
+              className="h-8 px-3 text-sm"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isLoading}
-              className="bg-cyan-600 hover:bg-cyan-700"
+              className="bg-cyan-600 hover:bg-cyan-700 h-8 px-3 text-sm"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
                   Guardando...
                 </>
               ) : (
                 <>
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="w-3 h-3 mr-1.5" />
                   Guardar
                 </>
               )}
@@ -3469,7 +3565,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         setShowCategoriaModal(open);
         if (!open) setEditingCategoriaQuick(null);
       }}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
           <CategoriaFormComponent
             categoria={editingCategoriaQuick}
             editingCategoria={editingCategoriaQuick}
@@ -3488,7 +3584,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         setShowTipoModal(open);
         if (!open) setEditingTipoQuick(null);
       }}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
           <TipoFormComponent
             tipo={editingTipoQuick}
             editingTipo={editingTipoQuick}
@@ -3507,7 +3603,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         setShowLineaModal(open);
         if (!open) setEditingLineaQuick(null);
       }}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
           <LineaFormComponent
             linea={editingLineaQuick}
             editingLinea={editingLineaQuick}
@@ -3527,7 +3623,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         setShowSublineaModal(open);
         if (!open) setEditingSublineaQuick(null);
       }}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
           <SublineaFormComponent
             sublinea={editingSublineaQuick}
             editingSublinea={editingSublineaQuick}
@@ -3547,7 +3643,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         setShowUnidadModal(open);
         if (!open) setEditingUnidadQuick(null);
       }}>
-        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
           <MedidaFormComponent
             medida={editingUnidadQuick}
             editingMedida={editingUnidadQuick}
@@ -3558,6 +3654,26 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
               setEditingUnidadQuick(null);
             }}
             toast={toast}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear/editar presentación */}
+      <Dialog open={showPresentacionModal} onOpenChange={(open) => {
+        setShowPresentacionModal(open);
+        if (!open) setEditingPresentacionQuick(null);
+      }}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <PresentacionMedidaFormComponent
+            presentacionMedida={editingPresentacionQuick}
+            editingPresentacionMedida={editingPresentacionQuick}
+            medidas={medidas as any}
+            onSubmit={handleQuickCreatePresentacionSubmit}
+            isLoading={isCreatingPresentacion}
+            onCancel={() => {
+              setShowPresentacionModal(false);
+              setEditingPresentacionQuick(null);
+            }}
           />
         </DialogContent>
       </Dialog>
@@ -3580,17 +3696,17 @@ const ProductosPage: React.FC = () => {
   const [esReceta, setEsReceta] = useState<boolean>(false);
   const [verMenus, setVerMenus] = useState<boolean>(false); // Filtro para mostrar solo recetas
   const [isFiltering, setIsFiltering] = useState<boolean>(false); // Loading para el filtro
-
+  
   // Estados para modal de ingredientes de receta
   const [showIngredientesModal, setShowIngredientesModal] = useState(false);
   const [recetaSeleccionada, setRecetaSeleccionada] = useState<{ id: number, nombre: string } | null>(null);
   const [ingredientesReceta, setIngredientesReceta] = useState<any[]>([]);
-
+  
   // Estados para modal de ingredientes en el formulario
   const [showIngredientesModalFormulario, setShowIngredientesModalFormulario] = useState(false);
   const [recetaSeleccionadaFormulario, setRecetaSeleccionadaFormulario] = useState<{ id: number, nombre: string } | null>(null);
   const [ingredientesRecetaFormulario, setIngredientesRecetaFormulario] = useState<any[]>([]);
-
+  
   // Estados para unidades de servicio
   const [unidadesServicio, setUnidadesServicio] = useState<any[]>([]);
   const [unidadesServicioAsignadas, setUnidadesServicioAsignadas] = useState<any[]>([]);
@@ -3616,7 +3732,7 @@ const ProductosPage: React.FC = () => {
       const data = await unidadServiciosService.listUnidadesServicio();
       const unidadesActivas = data.filter(u => u.activo);
       setUnidadesServicio(unidadesActivas);
-
+      
       // Cargar unidades asignadas si estamos editando un producto
       if (editingProducto && editingProducto.id) {
         const unidadesAsignadas = await productoUnidadesService.getUnidadesByProducto(editingProducto.id);
@@ -3651,7 +3767,7 @@ const ProductosPage: React.FC = () => {
   const handleEliminarUnidadServicio = (idUnidad: number) => {
     setUnidadesServicioAsignadas(unidadesServicioAsignadas.filter(u => u.id_unidad_servicio !== idUnidad));
   };
-
+  
   // Estados para utilidades del producto
   const [tiempoPreparacion, setTiempoPreparacion] = useState<string>("00:00:00");
   const [unidadTiempoPreparacion, setUnidadTiempoPreparacion] = useState<number>(0);
@@ -3674,7 +3790,7 @@ const ProductosPage: React.FC = () => {
   const handleVerMenusChange = (checked: boolean) => {
     console.log('🔄 Switch cambiado a:', checked);
     setIsFiltering(true);
-
+    
     // Timeout de 2 segundos
     setTimeout(() => {
       setVerMenus(checked);
@@ -3758,66 +3874,66 @@ const ProductosPage: React.FC = () => {
 
             {producto.estado === 1 ? (
               <Can action="accion-desactivar-producto">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Inactivar producto"
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Inactivar producto"
                         disabled
                         className="h-6 w-6 p-0 opacity-50 cursor-not-allowed"
-                      >
+                          >
                         <Lock className="h-3 w-3 text-yellow-600" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
                       <p>Inactivar (Deshabilitado)</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
               </Can>
             ) : (
               <>
-                <Can action="accion-activar-producto">
-                  <AlertDialog>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Activar producto"
+              <Can action="accion-activar-producto">
+                <AlertDialog>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Activar producto"
                               className="h-6 w-6 p-0"
-                            >
+                          >
                               <CheckCircle className="h-3 w-3 text-green-600 hover:text-green-800 transition-colors" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Activar</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción activará el producto "{producto.nombre}".
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleActivateProducto(producto.id!)}
-                        >
-                          Activar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </Can>
+                          </Button>
+                        </AlertDialogTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Activar</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción activará el producto "{producto.nombre}".
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => handleActivateProducto(producto.id!)}
+                      >
+                        Activar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </Can>
 
                 <Can action="accion-eliminar-producto">
                   <AlertDialog>
@@ -3863,7 +3979,7 @@ const ProductosPage: React.FC = () => {
             )}
           </div>
         );
-
+      
       case 'codigo_nombre':
         return (
           <div className="flex flex-col">
@@ -3880,7 +3996,7 @@ const ProductosPage: React.FC = () => {
             </span>
           </div>
         );
-
+      
       case 'referencia_medida':
         return (
           <div className="flex flex-col">
@@ -3892,7 +4008,7 @@ const ProductosPage: React.FC = () => {
             </span>
           </div>
         );
-
+      
       case 'tipo_servicio':
         return (
           <div className="flex flex-col">
@@ -3904,7 +4020,7 @@ const ProductosPage: React.FC = () => {
             </span>
           </div>
         );
-
+      
       case 'linea_sublinea':
         return (
           <div className="flex flex-col">
@@ -3916,7 +4032,7 @@ const ProductosPage: React.FC = () => {
             </span>
           </div>
         );
-
+      
       case 'costo':
         return (
           <div className="text-right">
@@ -3929,7 +4045,7 @@ const ProductosPage: React.FC = () => {
             )}
           </div>
         );
-
+      
       case 'tipo_producto':
         return (
           <div className="text-left">
@@ -3938,7 +4054,7 @@ const ProductosPage: React.FC = () => {
             </span>
           </div>
         );
-
+      
       case 'estado':
         return (
           <div className="flex justify-center">
@@ -3947,7 +4063,7 @@ const ProductosPage: React.FC = () => {
             </Badge>
           </div>
         );
-
+      
       default:
         return <span>-</span>;
     }
@@ -4038,7 +4154,7 @@ const ProductosPage: React.FC = () => {
     };
 
     window.addEventListener('categoriaChanged', handleCategoriaChange as EventListener);
-
+    
     return () => {
       window.removeEventListener('categoriaChanged', handleCategoriaChange as EventListener);
     };
@@ -4081,7 +4197,7 @@ const ProductosPage: React.FC = () => {
   const createProductoMutation = useMutation({
     mutationFn: async (data: ProductoForm & { tiempoPreparacion?: string; utilidadesProducto?: UtilidadProducto }) => {
       startLoading();
-
+      
       const productoData = {
         // No incluir id para que sea autoincrementable
         codigo: data.codigo!,
@@ -4125,7 +4241,7 @@ const ProductosPage: React.FC = () => {
       });
 
       const producto = await productosService.createProducto(dataWithEmpaques);
-
+      
       // Guardar utilidades si es una receta
       if (esReceta && producto.id && data.tiempoPreparacion && data.utilidadesProducto) {
         await productosService.saveOrUpdateProductoUtilidades(producto.id, {
@@ -4138,24 +4254,24 @@ const ProductosPage: React.FC = () => {
           estado: 1
         });
       }
-
+      
       return producto;
     },
     onSuccess: async (producto) => {
       stopLoading();
-
+      
       // Sincronizar unidades de servicio si hay alguna asignada
       if (unidadesServicioAsignadas.length > 0) {
         const idsUnidades = unidadesServicioAsignadas.map(u => u.id_unidad_servicio);
         await productoUnidadesService.sincronizarUnidades(producto.id, idsUnidades);
       }
-
+      
       toast({
         title: "Producto creado",
         description: "El producto ha sido creado exitosamente",
       });
-
-
+      
+      
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       setActiveTab("productos");
       setEditingProducto(null);
@@ -4172,14 +4288,14 @@ const ProductosPage: React.FC = () => {
   });
 
   const updateProductoMutation = useMutation({
-    mutationFn: async ({ id, data, tiempoPreparacion, utilidadesProducto }: {
-      id: number;
-      data: Partial<ProductoData>;
-      tiempoPreparacion?: string;
-      utilidadesProducto?: UtilidadProducto
+    mutationFn: async ({ id, data, tiempoPreparacion, utilidadesProducto }: { 
+      id: number; 
+      data: Partial<ProductoData>; 
+      tiempoPreparacion?: string; 
+      utilidadesProducto?: UtilidadProducto 
     }) => {
       startLoading();
-
+      
       // Incluir ingredientes y empaques si existen (excluir campos de utilidades)
       const { tiempoPreparacion: _, utilidadesProducto: __, ...dataWithoutUtilidades } = data as any;
       const dataWithEmpaques = {
@@ -4188,7 +4304,7 @@ const ProductosPage: React.FC = () => {
         ingredientes: dataWithoutUtilidades.ingredientes || [],
       };
       const producto = await productosService.updateProducto(id, dataWithEmpaques);
-
+      
       // Actualizar utilidades si es una receta
       if (esReceta && id && tiempoPreparacion && utilidadesProducto) {
         await productosService.saveOrUpdateProductoUtilidades(id, {
@@ -4201,7 +4317,7 @@ const ProductosPage: React.FC = () => {
           estado: 1
         });
       }
-
+      
       return producto;
     },
     onSuccess: async (producto, variables) => {
@@ -4210,8 +4326,8 @@ const ProductosPage: React.FC = () => {
         title: "Producto actualizado",
         description: "El producto ha sido actualizado exitosamente",
       });
-
-
+      
+      
       queryClient.invalidateQueries({ queryKey: ['productos'] });
       setActiveTab("productos");
       setEditingProducto(null);
@@ -4301,7 +4417,7 @@ const ProductosPage: React.FC = () => {
 
       return matchesSearch && matchesStatus;
     });
-
+    
     // Ordenar por ID en orden descendente (último registro primero)
     return filtered.sort((a, b) => b.id - a.id);
   }, [productos, searchTerm, statusFilter]);
@@ -4317,15 +4433,15 @@ const ProductosPage: React.FC = () => {
     try {
       console.log('🍳 Abriendo modal de ingredientes para:', producto.nombre);
       setRecetaSeleccionada({ id: producto.id, nombre: producto.nombre });
-
+      
       // Obtener ingredientes de la receta
       const ingredientes = await productosService.getProductoIngredientes(producto.id);
       console.log('📋 Ingredientes obtenidos:', ingredientes);
-
+      
       // Obtener todos los productos para poder mostrar los nombres correctamente
       const todosLosProductos = await productosService.listProductos(false); // false = todos los productos
       console.log('📋 Todos los productos disponibles:', todosLosProductos.length);
-
+      
       // Agregar información del producto a cada ingrediente
       const ingredientesConInfo = ingredientes.map(ingrediente => {
         const productoIngrediente = todosLosProductos.find(p => p.id === ingrediente.id_producto);
@@ -4335,7 +4451,7 @@ const ProductosPage: React.FC = () => {
           producto_info: productoIngrediente
         };
       });
-
+      
       console.log('📋 Ingredientes con información:', ingredientesConInfo);
       setIngredientesReceta(ingredientesConInfo);
       setShowIngredientesModal(true);
@@ -4353,10 +4469,10 @@ const ProductosPage: React.FC = () => {
   const handleVerIngredientesRecetaFormulario = async (ingrediente: any) => {
     try {
       console.log('🍳 Abriendo modal de ingredientes desde formulario para:', ingrediente.nombre_producto);
-
+      
       // Buscar el producto en la lista de productos para obtener su información completa
       const productoIngrediente = productos.find(p => p.id === ingrediente.id_producto);
-
+      
       if (!productoIngrediente) {
         toast({
           title: "Error",
@@ -4365,16 +4481,16 @@ const ProductosPage: React.FC = () => {
         });
         return;
       }
-
+      
       setRecetaSeleccionadaFormulario({ id: productoIngrediente.id, nombre: productoIngrediente.nombre });
-
+      
       // Obtener ingredientes de la receta
       const ingredientes = await productosService.getProductoIngredientes(productoIngrediente.id);
       console.log('📋 Ingredientes obtenidos desde formulario:', ingredientes);
-
+      
       // Obtener todos los productos para poder mostrar los nombres correctamente
       const todosLosProductos = await productosService.listProductos(false); // false = todos los productos
-
+      
       // Agregar información del producto a cada ingrediente
       const ingredientesConInfo = ingredientes.map(ingrediente => {
         const productoIngrediente = todosLosProductos.find(p => p.id === ingrediente.id_producto);
@@ -4384,7 +4500,7 @@ const ProductosPage: React.FC = () => {
           producto_info: productoIngrediente
         };
       });
-
+      
       console.log('📋 Ingredientes con información desde formulario:', ingredientesConInfo);
       setIngredientesRecetaFormulario(ingredientesConInfo);
       setShowIngredientesModalFormulario(true);
@@ -4416,7 +4532,7 @@ const ProductosPage: React.FC = () => {
   };
 
   return (
-    <div className="p-4 max-w-full mx-auto">
+    <div className="p-4 max-w-full mx-auto overflow-x-hidden">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Package className="w-8 h-8 text-cyan-600" />
@@ -4534,17 +4650,17 @@ const ProductosPage: React.FC = () => {
                       </TableRow>
                     ) : (
                       productosFiltrados.map((producto: ProductoData) => (
-                        <TableRow
-                          key={producto.id}
+                        <TableRow 
+                          key={producto.id} 
                           className={`text-xs ${producto.id_clase_servicio && producto.id_clase_servicio > 0
-                              ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400'
+                              ? 'bg-blue-50 hover:bg-blue-100 border-l-4 border-l-blue-400' 
                               : 'hover:bg-gray-50'
-                            }`}
+                          }`}
                         >
                           {getTableColumns().map((column) => (
                             <TableCell key={column.key} className={`${column.className} text-left`}>
                               {renderCellContent(producto, column.key)}
-                            </TableCell>
+                          </TableCell>
                           ))}
                         </TableRow>
                       ))
@@ -4556,7 +4672,7 @@ const ProductosPage: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="formulario" className="mt-6">
+        <TabsContent value="formulario" className="mt-6 overflow-x-hidden">
           <ProductoFormComponent
             producto={editingProducto}
             editingProducto={editingProducto}
@@ -4594,13 +4710,13 @@ const ProductosPage: React.FC = () => {
             onSubmit={async (data) => {
               if (editingProducto) {
                 // Actualizar producto
-                updateProductoMutation.mutate({
-                  id: editingProducto.id!,
+                updateProductoMutation.mutate({ 
+                  id: editingProducto.id!, 
                   data,
                   tiempoPreparacion: tiempoPreparacion,
                   utilidadesProducto: utilidadesProducto
                 });
-
+                
                 // Sincronizar unidades de servicio
                 const idsUnidades = unidadesServicioAsignadas.map(u => u.id_unidad_servicio);
                 await productoUnidadesService.sincronizarUnidades(editingProducto.id!, idsUnidades);
@@ -4638,7 +4754,7 @@ const ProductosPage: React.FC = () => {
               Lista detallada de todos los ingredientes que componen esta receta
             </DialogDescription>
           </DialogHeader>
-
+          
           <div className="mt-4">
             {ingredientesReceta.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -4659,7 +4775,7 @@ const ProductosPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-blue-900">
-                          {formatCurrency(ingredientesReceta.reduce((total: number, ingrediente: any) =>
+                          {formatCurrency(ingredientesReceta.reduce((total: number, ingrediente: any) => 
                             total + (ingrediente.cantidad * (ingrediente.costo || 0)), 0
                           ))}
                         </p>
@@ -4681,7 +4797,7 @@ const ProductosPage: React.FC = () => {
                       <div className="col-span-3 text-right">Costo Total</div>
                     </div>
                   </div>
-
+                  
                   {/* Body */}
                   <div className="divide-y divide-gray-100">
                     {ingredientesReceta.map((ingrediente: any, index: number) => (
@@ -4738,7 +4854,7 @@ const ProductosPage: React.FC = () => {
               Lista detallada de todos los ingredientes que componen esta receta
             </DialogDescription>
           </DialogHeader>
-
+          
           <div className="mt-4">
             {ingredientesRecetaFormulario.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
@@ -4759,7 +4875,7 @@ const ProductosPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-blue-900">
-                          {formatCurrency(ingredientesRecetaFormulario.reduce((total: number, ingrediente: any) =>
+                          {formatCurrency(ingredientesRecetaFormulario.reduce((total: number, ingrediente: any) => 
                             total + (ingrediente.cantidad * (ingrediente.costo || 0)), 0
                           ))}
                         </p>
@@ -4781,7 +4897,7 @@ const ProductosPage: React.FC = () => {
                       <div className="col-span-3 text-right">Costo Total</div>
                     </div>
                   </div>
-
+                  
                   {/* Body */}
                   <div className="divide-y divide-gray-100">
                     {ingredientesRecetaFormulario.map((ingrediente: any, index: number) => (

@@ -50,7 +50,7 @@ interface PresentacionMedidaFormComponentProps {
   onCancel: () => void;
 }
 
-const PresentacionMedidaFormComponent: React.FC<PresentacionMedidaFormComponentProps> = ({ 
+export const PresentacionMedidaFormComponent: React.FC<PresentacionMedidaFormComponentProps> = ({ 
   presentacionMedida, 
   editingPresentacionMedida,
   medidas,
