@@ -8,6 +8,7 @@ export interface MedidaData {
   clase_medida?: string;
   cantidad: number;
   val_excedente: number;
+  conversion_factor: number;
   medida_principal: boolean;
   estado: number;
 }
@@ -20,6 +21,7 @@ export interface MedidaForm {
   clase_medida?: string;
   cantidad: number;
   val_excedente: number;
+  conversion_factor: number;
   medida_principal: boolean;
   estado?: number;
 }

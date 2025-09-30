@@ -107,7 +107,7 @@ const Index = () => {
     <div className="p-4 max-w-full mx-auto">
       {/* Header del Dashboard */}
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Activity className="w-8 h-8 text-cyan-600" />
           Dashboard del Sistema
         </h1>

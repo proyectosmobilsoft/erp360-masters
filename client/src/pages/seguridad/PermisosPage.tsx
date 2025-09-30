@@ -449,8 +449,8 @@ const PermisosPage: React.FC = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Shield className="w-8 h-8 text-cyan-600" />
           Gestión de Permisos
         </h1>
@@ -535,11 +535,11 @@ const PermisosPage: React.FC = () => {
               )}
               <Table className="min-w-[800px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
-                  <TableRow className="text-left font-semibold text-gray-700">
-                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                    <TableHead className="px-4 py-3">Nombre</TableHead>
-                    <TableHead className="px-4 py-3">Descripción</TableHead>
-                    <TableHead className="px-4 py-3">Estado</TableHead>
+                  <TableRow className="text-center font-semibold text-gray-700">
+                    <TableHead className="px-2 py-1 text-teal-600 text-center">Acciones</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Descripción</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -552,7 +552,7 @@ const PermisosPage: React.FC = () => {
                   ) : (
                     modulosFiltrados.map((modulo) => (
                       <TableRow key={modulo.id} className="hover:bg-gray-50">
-                        <TableCell className="px-2 py-1">
+                        <TableCell className="px-2 py-1 text-left">
                           <div className="flex flex-row gap-1 items-center">
                             <Can action="accion-editar-modulo">
                               <TooltipProvider>
@@ -722,13 +722,13 @@ const PermisosPage: React.FC = () => {
                             </Can>
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900">
+                        <TableCell className="px-4 py-3 text-sm text-gray-900 text-left">
                           {modulo.nombre}
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900">
+                        <TableCell className="px-4 py-3 text-sm text-gray-900 text-left">
                           {modulo.descripcion}
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="px-4 py-3 text-left">
                           <Badge
                             variant={modulo.activo ? "default" : "secondary"}
                             className={

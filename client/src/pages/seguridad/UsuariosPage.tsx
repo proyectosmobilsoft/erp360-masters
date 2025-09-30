@@ -433,8 +433,8 @@ const UsuariosPage = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Users className="w-8 h-8 text-cyan-600" />
           Gestión de Usuarios
         </h1>
@@ -548,14 +548,14 @@ const UsuariosPage = () => {
               )}
               <Table className="min-w-[900px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
-                  <TableRow className="text-left font-semibold text-gray-700">
-                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                    <TableHead className="px-4 py-3">Identificación</TableHead>
-                    <TableHead className="px-4 py-3">Nombre Completo</TableHead>
-                    <TableHead className="px-4 py-3">Username</TableHead>
-                    <TableHead className="px-4 py-3">Teléfono</TableHead>
-                    <TableHead className="px-4 py-3">Perfiles</TableHead>
-                    <TableHead className="px-4 py-3">Estado</TableHead>
+                  <TableRow className="text-center font-semibold text-gray-700">
+                    <TableHead className="px-2 py-1 text-teal-600 text-center">Acciones</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Identificación</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Nombre Completo</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Username</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Teléfono</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Perfiles</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -568,7 +568,7 @@ const UsuariosPage = () => {
                   ) : (
                     usuariosFiltrados.map((usuario) => (
                       <TableRow key={usuario.id} className="hover:bg-gray-50">
-                        <TableCell className="px-2 py-1">
+                        <TableCell className="px-2 py-1 text-left">
                           <div className="flex flex-row gap-1 items-center">
                             <Can action="accion-editar-usuario">
                             <TooltipProvider>
@@ -720,19 +720,19 @@ const UsuariosPage = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {usuario.identificacion || "-"}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {`${usuario.primer_nombre} ${usuario.segundo_nombre || ""} ${usuario.primer_apellido} ${usuario.segundo_apellido || ""}`.trim()}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {usuario.username}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {usuario.telefono || "-"}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {usuario.gen_usuario_roles && usuario.gen_usuario_roles.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
                               {usuario.gen_usuario_roles.map((rol, index) => (

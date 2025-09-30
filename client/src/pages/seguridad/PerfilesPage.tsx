@@ -567,8 +567,8 @@ const PerfilesPage = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Crown className="w-8 h-8 text-cyan-600" />
           Gestión de Perfiles y Vistas
         </h1>
@@ -664,13 +664,13 @@ const PerfilesPage = () => {
             <div className="overflow-x-auto rounded-lg shadow-sm">
               <Table className="min-w-[800px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
-                  <TableRow className="text-left font-semibold text-gray-700">
-                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                    <TableHead className="px-4 py-3">Código</TableHead>
-                    <TableHead className="px-4 py-3">Nombre</TableHead>
-                    <TableHead className="px-4 py-3">Descripción</TableHead>
-                    <TableHead className="px-4 py-3">Cantidad de Módulos</TableHead>
-                    <TableHead className="px-4 py-3">Estado</TableHead>
+                  <TableRow className="text-center font-semibold text-gray-700">
+                    <TableHead className="px-2 py-1 text-teal-600 text-center">Acciones</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Código</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Descripción</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Cantidad de Módulos</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -683,7 +683,7 @@ const PerfilesPage = () => {
                   ) : (
                     filteredPerfiles.map((perfil: Perfil, index: number) => (
                       <TableRow key={perfil.id} className="hover:bg-gray-50">
-                        <TableCell className="px-2 py-1">
+                        <TableCell className="px-2 py-1 text-left">
                           <div className="flex flex-row gap-1 items-center">
                             <Can action="accion-editar-perfil">
                               <TooltipProvider>
@@ -823,11 +823,11 @@ const PerfilesPage = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900">{String(perfil.id).padStart(3, '0')}</TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-900">{perfil.nombre}</TableCell>
-                        <TableCell className="px-4 py-3 text-sm text-gray-500">{perfil.descripcion || 'N/A'}</TableCell>
-                        <TableCell className="px-4 py-3 text-center font-bold text-cyan-700">
-                          <div className="flex items-center justify-center gap-2">
+                        <TableCell className="px-4 py-3 text-sm text-gray-900 text-left">{String(perfil.id).padStart(3, '0')}</TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-gray-900 text-left">{perfil.nombre}</TableCell>
+                        <TableCell className="px-4 py-3 text-sm text-gray-500 text-left">{perfil.descripcion || 'N/A'}</TableCell>
+                        <TableCell className="px-4 py-3 text-left font-bold text-cyan-700">
+                          <div className="flex items-center justify-start gap-2">
                             <span>{perfil.modulos_count}</span>
                             <Can action="accion-ver-modulos-perfil">
                               <TooltipProvider>
@@ -851,7 +851,7 @@ const PerfilesPage = () => {
                             </Can>
                           </div>
                         </TableCell>
-                        <TableCell className="px-4 py-3">
+                        <TableCell className="px-4 py-3 text-left">
                           <Badge variant={perfil.activo ? "default" : "secondary"} className={perfil.activo ? "bg-brand-lime/10 text-brand-lime border-brand-lime/20" : "bg-gray-200 text-gray-600 border-gray-300"}>
                             {perfil.activo ? "Activo" : "Inactivo"}
                           </Badge>
@@ -985,7 +985,7 @@ const PerfilesPage = () => {
         </TabsContent>
 
         <TabsContent value="vistas" className="space-y-4">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-800">
               {editingPerfil ? 'Editar Perfil' : 'Registro de Perfil'}
             </h2>

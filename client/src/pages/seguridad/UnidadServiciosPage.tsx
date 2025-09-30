@@ -285,8 +285,8 @@ const UnidadServiciosPage: React.FC = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Building2 className="w-8 h-8 text-cyan-600" />
           Gestión de Unidad Servicios
         </h1>
@@ -367,13 +367,13 @@ const UnidadServiciosPage: React.FC = () => {
               )}
               <Table className="min-w-[900px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
-                  <TableRow className="text-left font-semibold text-gray-700">
-                    <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                    <TableHead className="px-4 py-3">Código</TableHead>
-                    <TableHead className="px-4 py-3">Nombre del Servicio</TableHead>
-                    <TableHead className="px-4 py-3">Sucursal</TableHead>
-                    <TableHead className="px-4 py-3">No. PPL</TableHead>
-                    <TableHead className="px-4 py-3">Estado</TableHead>
+                  <TableRow className="text-center font-semibold text-gray-700">
+                    <TableHead className="px-2 py-1 text-teal-600 text-center">Acciones</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Código</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Nombre del Servicio</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Sucursal</TableHead>
+                    <TableHead className="px-4 py-3 text-center">No. PPL</TableHead>
+                    <TableHead className="px-4 py-3 text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -386,7 +386,7 @@ const UnidadServiciosPage: React.FC = () => {
                   ) : (
                     unidadesFiltradas.map((unidad) => (
                       <TableRow key={unidad.id} className="hover:bg-gray-50">
-                        <TableCell className="px-2 py-1">
+                        <TableCell className="px-2 py-1 text-left">
                           <div className="flex flex-row gap-1 items-center">
                             <Can action="accion-editar-unidad-servicio">
                               <TooltipProvider>
@@ -538,19 +538,19 @@ const UnidadServiciosPage: React.FC = () => {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium text-left">
                           {unidad.codigo}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {unidad.nombre_servicio}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {unidad.gen_sucursales?.nombre || "-"}
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-sm text-gray-900">
+                        <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                           {unidad.no_ppl || "-"}
                         </TableCell>
-                        <TableCell className="px-3 py-2">
+                        <TableCell className="px-3 py-2 text-left">
                           <Badge
                             variant={unidad.activo ? "default" : "secondary"}
                             className={

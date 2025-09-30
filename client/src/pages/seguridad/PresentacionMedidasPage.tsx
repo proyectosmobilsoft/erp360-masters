@@ -379,8 +379,8 @@ const PresentacionMedidasPage: React.FC = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Ruler className="w-8 h-8 text-cyan-600" />
           Gestión de Presentación Medidas
         </h1>
@@ -458,11 +458,11 @@ const PresentacionMedidasPage: React.FC = () => {
               <div className="rounded-md border">
                 <Table>
                   <TableHeader className="bg-cyan-50">
-                    <TableRow className="text-left font-semibold text-gray-700">
-                      <TableHead className="px-2 py-1 text-teal-600 w-20">Acciones</TableHead>
-                      <TableHead className="px-4 py-3">Nombre</TableHead>
-                      <TableHead className="px-4 py-3 w-32">Medida</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Estado</TableHead>
+                    <TableRow className="text-center font-semibold text-gray-700">
+                      <TableHead className="px-2 py-1 text-teal-600 w-20 text-center">Acciones</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
+                      <TableHead className="px-4 py-3 w-32 text-center">Medida</TableHead>
+                      <TableHead className="px-4 py-3 w-24 text-center">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -657,10 +657,10 @@ const PresentacionMedidasPage: React.FC = () => {
 
                         </div>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                         {presentacionMedida.nombre}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-sm text-gray-900 w-32">
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 w-32 text-left">
                         {presentacionMedida.inv_medidas ? (
                           <Badge variant="default" className="bg-blue-100 text-blue-800">
                             {presentacionMedida.inv_medidas.nombre}
@@ -671,7 +671,7 @@ const PresentacionMedidasPage: React.FC = () => {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="px-3 py-2">
+                      <TableCell className="px-3 py-2 text-left">
                         <Badge
                           variant={presentacionMedida.estado === 1 ? "default" : "secondary"}
                           className={

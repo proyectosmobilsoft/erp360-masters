@@ -401,8 +401,8 @@ const TiposPage: React.FC = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Tag className="w-8 h-8 text-cyan-600" />
           Gestión de Tipos de Producto
         </h1>
@@ -480,12 +480,12 @@ const TiposPage: React.FC = () => {
               <div className="rounded-md border">
                 <Table>
                   <TableHeader className="bg-cyan-50">
-                    <TableRow className="text-left font-semibold text-gray-700">
-                      <TableHead className="px-2 py-1 text-teal-600 w-20">Acciones</TableHead>
-                      <TableHead className="px-4 py-3 w-20">Código</TableHead>
-                      <TableHead className="px-4 py-3">Nombre</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Es Receta</TableHead>
-                      <TableHead className="px-4 py-3 w-24">Estado</TableHead>
+                    <TableRow className="text-center font-semibold text-gray-700">
+                      <TableHead className="px-2 py-1 text-teal-600 w-20 text-center">Acciones</TableHead>
+                      <TableHead className="px-4 py-3 w-20 text-center">Código</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
+                      <TableHead className="px-4 py-3 w-24 text-center">Es Receta</TableHead>
+                      <TableHead className="px-4 py-3 w-24 text-center">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -680,13 +680,13 @@ const TiposPage: React.FC = () => {
 
                         </div>
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-20">
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium w-20 text-left">
                         {tipo.codigo}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-sm text-gray-900">
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                         {tipo.nombre}
                       </TableCell>
-                      <TableCell className="px-3 py-2 text-sm text-gray-900 w-24">
+                      <TableCell className="px-3 py-2 text-sm text-gray-900 w-24 text-left">
                         {tipo.es_receta ? (
                           <Badge variant="default" className="bg-blue-100 text-blue-800">
                             Sí
@@ -697,7 +697,7 @@ const TiposPage: React.FC = () => {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell className="px-3 py-2">
+                      <TableCell className="px-3 py-2 text-left">
                         <Badge
                           variant={tipo.estado === 1 ? "default" : "secondary"}
                           className={

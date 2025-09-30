@@ -230,8 +230,8 @@ const BodegasPage: React.FC = () => {
 
   return (
     <div className="p-4 max-w-full mx-auto">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2 mb-2">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-extrabold text-cyan-800 flex items-center gap-2">
           <Package className="w-8 h-8 text-cyan-600" />
           Gestión de Bodegas
         </h1>
@@ -309,12 +309,12 @@ const BodegasPage: React.FC = () => {
               <div className="border rounded-lg overflow-hidden">
                 <Table>
                   <TableHeader className="bg-cyan-50">
-                    <TableRow className="text-left font-semibold text-gray-700">
-                      <TableHead className="px-2 py-1 text-teal-600">Acciones</TableHead>
-                      <TableHead className="px-4 py-3">Código</TableHead>
-                      <TableHead className="px-4 py-3">Nombre</TableHead>
-                      <TableHead className="px-4 py-3">Unidad de Servicio</TableHead>
-                      <TableHead className="px-4 py-3">Estado</TableHead>
+                    <TableRow className="text-center font-semibold text-gray-700">
+                      <TableHead className="px-2 py-1 text-teal-600 text-center">Acciones</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Código</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Unidad de Servicio</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -336,8 +336,8 @@ const BodegasPage: React.FC = () => {
                     ) : (
                       filteredBodegas.map((bodega) => (
                         <TableRow key={bodega.id} className="hover:bg-cyan-50/50 transition-colors">
-                          <TableCell className="px-2 py-1">
-                            <div className="flex items-center justify-center gap-1">
+                          <TableCell className="px-2 py-1 text-left">
+                            <div className="flex items-center justify-start gap-1">
                               <Can action="accion-editar-bodega">
                                 <TooltipProvider>
                                   <Tooltip>
@@ -462,8 +462,8 @@ const BodegasPage: React.FC = () => {
                               )}
                             </div>
                           </TableCell>
-                                                     <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium">{bodega.codigo}</TableCell>
-                           <TableCell className="px-3 py-2 text-sm text-gray-900">
+                                                     <TableCell className="px-3 py-2 text-sm text-gray-900 font-medium text-left">{bodega.codigo}</TableCell>
+                           <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                              <div>
                                <div className="font-medium">{bodega.nombre}</div>
                                <div className="text-xs text-gray-500 mt-1">
@@ -471,8 +471,8 @@ const BodegasPage: React.FC = () => {
                                </div>
                              </div>
                            </TableCell>
-                           <TableCell className="px-3 py-2 text-sm text-gray-900">{bodega.unidad_nombre || 'N/A'}</TableCell>
-                          <TableCell className="px-3 py-2">
+                           <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">{bodega.unidad_nombre || 'N/A'}</TableCell>
+                          <TableCell className="px-3 py-2 text-left">
                             <Badge 
                               variant={bodega.estado === 1 ? "default" : "secondary"}
                               className={bodega.estado === 1 ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}
