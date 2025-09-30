@@ -49,7 +49,8 @@ import {
   Trash2,
   ChevronDown,
   Eye,
-  X
+  X,
+  PlusCircle
 } from 'lucide-react';
 import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
@@ -62,6 +63,12 @@ import { interfazContableService, InterfazContableData } from '@/services/interf
 import { presentacionMedidasService, PresentacionMedidaData } from '@/services/presentacionMedidasService';
 import { productosUnidadesService, ProductoUnidadData } from '@/services/productosUnidadesService';
 import { sublineasService } from '@/services/sublineasService';
+import { categoriasService } from '@/services/categoriasService';
+import { CategoriaFormComponent } from './CategoriasPage';
+import { TipoFormComponent } from './TiposPage';
+import { LineaFormComponent } from './LineasPage';
+import { SublineaFormComponent } from './SublineasPage';
+import { MedidaFormComponent } from './MedidasPage';
 
 // Image Upload Component
 interface ImageUploadProps {
@@ -267,6 +274,9 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   handleAgregarUnidadServicio,
   handleEliminarUnidadServicio
 }) => {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const [formData, setFormData] = useState<ProductoForm>({
     codigo: producto?.codigo || "",
     nombre: producto?.nombre || "",
@@ -350,6 +360,29 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
   const [ingredientes, setIngredientes] = useState<any[]>([]);
   const [totalIngredientes, setTotalIngredientes] = useState(0);
   const [totalPorciones, setTotalPorciones] = useState(0);
+
+  // Estados para modales de creación rápida
+  const [showCategoriaModal, setShowCategoriaModal] = useState(false);
+  const [showTipoModal, setShowTipoModal] = useState(false);
+  const [showLineaModal, setShowLineaModal] = useState(false);
+  const [showSublineaModal, setShowSublineaModal] = useState(false);
+  const [showUnidadModal, setShowUnidadModal] = useState(false);
+
+  // Estados para edición rápida
+  const [editingCategoriaQuick, setEditingCategoriaQuick] = useState<CategoriaData | null>(null);
+  const [editingTipoQuick, setEditingTipoQuick] = useState<TipoData | null>(null);
+  const [editingLineaQuick, setEditingLineaQuick] = useState<LineaData | null>(null);
+  const [editingSublineaQuick, setEditingSublineaQuick] = useState<SublineaDataFull | null>(null);
+  const [editingUnidadQuick, setEditingUnidadQuick] = useState<MedidaData | null>(null);
+
+  // Estados para formularios de creación rápida
+  const [quickCreateForm, setQuickCreateForm] = useState({
+    categoria: { nombre: '', isreceta: 0, requiere_empaques: 0 },
+    tipo: { codigo: '', nombre: '', es_receta: false },
+    linea: { codigo: '', nombre: '', id_categoria: 0 },
+    sublinea: { codigo: '', nombre: '', id_linea: 0 },
+    unidad: { codigo: '', nombre: '', abreviatura: '', clase_medida: '', cantidad: 1, val_excedente: 0 }
+  });
 
   // Función para calcular totales de ingredientes
   const calcularTotalesIngredientes = (ingredientesList: any[]) => {
@@ -1615,6 +1648,326 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     e.target.select();
   };
 
+  // Estados para loading de modales
+  const [isCreatingCategoria, setIsCreatingCategoria] = useState(false);
+  const [isCreatingTipo, setIsCreatingTipo] = useState(false);
+  const [isCreatingLinea, setIsCreatingLinea] = useState(false);
+  const [isCreatingSublinea, setIsCreatingSublinea] = useState(false);
+  const [isCreatingUnidad, setIsCreatingUnidad] = useState(false);
+
+  // Funciones para creación/edición rápida usando los componentes reutilizables
+  const handleQuickCreateCategoriaSubmit = async (data: any) => {
+    setIsCreatingCategoria(true);
+    try {
+      let categoriaResultado;
+      
+      if (editingCategoriaQuick && editingCategoriaQuick.id) {
+        // Editar categoría existente
+        categoriaResultado = await categoriasService.updateCategoria(editingCategoriaQuick.id, {
+          nombre: data.nombre.toUpperCase(),
+          isreceta: data.isreceta,
+          requiere_empaques: data.requiere_empaques,
+        });
+        
+        toast({
+          title: '✅ Categoría actualizada',
+          description: `La categoría "${categoriaResultado.nombre}" ha sido actualizada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nueva categoría
+        categoriaResultado = await categoriasService.createCategoria({
+          nombre: data.nombre.toUpperCase(),
+          isreceta: data.isreceta,
+          requiere_empaques: data.requiere_empaques,
+          estado: 1
+        });
+        
+        // Actualizar formData con la nueva categoría
+        setFormData(prev => ({
+          ...prev,
+          id_categoria: categoriaResultado.id
+        }));
+        
+        toast({
+          title: '✅ Categoría creada',
+          description: `La categoría "${categoriaResultado.nombre}" ha sido creada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["categorias"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowCategoriaModal(false);
+      setEditingCategoriaQuick(null);
+      
+    } catch (error) {
+      console.error('Error con categoría:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingCategoriaQuick ? 'actualizar' : 'crear'} la categoría. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingCategoria(false);
+    }
+  };
+
+  const handleQuickCreateTipoSubmit = async (data: any) => {
+    setIsCreatingTipo(true);
+    try {
+      let tipoResultado;
+      
+      if (editingTipoQuick && editingTipoQuick.id) {
+        // Editar tipo existente
+        tipoResultado = await tiposService.updateTipo(editingTipoQuick.id, {
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          es_receta: data.es_receta,
+        });
+        
+        toast({
+          title: '✅ Tipo actualizado',
+          description: `El tipo "${tipoResultado.nombre}" ha sido actualizado exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nuevo tipo
+        tipoResultado = await tiposService.createTipo({
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          es_receta: data.es_receta,
+          estado: 1
+        });
+        
+        // Actualizar formData con el nuevo tipo
+        setFormData(prev => ({
+          ...prev,
+          id_tipo_producto: tipoResultado.id || 0
+        }));
+        
+        toast({
+          title: '✅ Tipo creado',
+          description: `El tipo "${tipoResultado.nombre}" ha sido creado exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["tipos"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowTipoModal(false);
+      setEditingTipoQuick(null);
+      
+    } catch (error) {
+      console.error('Error con tipo:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingTipoQuick ? 'actualizar' : 'crear'} el tipo. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingTipo(false);
+    }
+  };
+
+  const handleQuickCreateLineaSubmit = async (data: any) => {
+    setIsCreatingLinea(true);
+    try {
+      let lineaResultado;
+      
+      if (editingLineaQuick && editingLineaQuick.id) {
+        // Editar línea existente
+        lineaResultado = await lineasService.updateLinea(editingLineaQuick.id, {
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          id_categoria: data.id_categoria,
+        });
+        
+        toast({
+          title: '✅ Línea actualizada',
+          description: `La línea "${lineaResultado.nombre}" ha sido actualizada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nueva línea
+        lineaResultado = await lineasService.createLinea({
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          id_categoria: formData.id_categoria || 0,
+          estado: 1
+        });
+        
+        // Actualizar formData con la nueva línea
+        setFormData(prev => ({
+          ...prev,
+          id_linea: lineaResultado.id
+        }));
+        
+        toast({
+          title: '✅ Línea creada',
+          description: `La línea "${lineaResultado.nombre}" ha sido creada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["lineas"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowLineaModal(false);
+      setEditingLineaQuick(null);
+      
+    } catch (error) {
+      console.error('Error con línea:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingLineaQuick ? 'actualizar' : 'crear'} la línea. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingLinea(false);
+    }
+  };
+
+  const handleQuickCreateSublineaSubmit = async (data: any) => {
+    setIsCreatingSublinea(true);
+    try {
+      let sublineaResultado;
+      
+      if (editingSublineaQuick && editingSublineaQuick.id) {
+        // Editar sublínea existente
+        sublineaResultado = await sublineasService.updateSublinea(editingSublineaQuick.id, {
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          id_linea: data.id_linea,
+        });
+        
+        toast({
+          title: '✅ Sublínea actualizada',
+          description: `La sublínea "${sublineaResultado.nombre}" ha sido actualizada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nueva sublínea
+        sublineaResultado = await sublineasService.createSublinea({
+          id: 0, // Temporal, será asignado por la BD
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          id_linea: formData.id_linea || 0,
+          estado: 1
+        });
+        
+        // Actualizar formData con la nueva sublínea
+        setFormData(prev => ({
+          ...prev,
+          id_sublineas: sublineaResultado.id
+        }));
+        
+        toast({
+          title: '✅ Sublínea creada',
+          description: `La sublínea "${sublineaResultado.nombre}" ha sido creada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["sublineas"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowSublineaModal(false);
+      setEditingSublineaQuick(null);
+      
+    } catch (error) {
+      console.error('Error con sublínea:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingSublineaQuick ? 'actualizar' : 'crear'} la sublínea. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingSublinea(false);
+    }
+  };
+
+  const handleQuickCreateUnidadSubmit = async (data: any) => {
+    setIsCreatingUnidad(true);
+    try {
+      let unidadResultado;
+      
+      if (editingUnidadQuick && editingUnidadQuick.id) {
+        // Editar unidad existente
+        unidadResultado = await medidasService.updateMedida(editingUnidadQuick.id, {
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          abreviatura: data.abreviatura.toUpperCase(),
+          clase_medida: data.clase_medida,
+          cantidad: data.cantidad || 1,
+          val_excedente: data.val_excedente || 0,
+          conversion_factor: data.conversion_factor || 1000,
+          medida_principal: data.medida_principal,
+        });
+        
+        toast({
+          title: '✅ Unidad actualizada',
+          description: `La unidad "${unidadResultado.nombre}" ha sido actualizada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      } else {
+        // Crear nueva unidad
+        unidadResultado = await medidasService.createMedida({
+          id: 0, // Temporal, será asignado por la BD
+          codigo: data.codigo,
+          nombre: data.nombre.toUpperCase(),
+          abreviatura: data.abreviatura.toUpperCase(),
+          clase_medida: data.clase_medida,
+          cantidad: 1,
+          val_excedente: 0,
+          conversion_factor: data.conversion_factor || 1000,
+          medida_principal: true,
+          estado: 1
+        });
+        
+        // Actualizar formData con la nueva unidad
+        setFormData(prev => ({
+          ...prev,
+          id_medida: unidadResultado.id
+        }));
+        
+        toast({
+          title: '✅ Unidad creada',
+          description: `La unidad "${unidadResultado.nombre}" ha sido creada exitosamente.`,
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+      }
+      
+      // Invalidar cache
+      await queryClient.invalidateQueries({ queryKey: ["medidas"] });
+      
+      // Cerrar modal y limpiar edición
+      setShowUnidadModal(false);
+      setEditingUnidadQuick(null);
+      
+    } catch (error) {
+      console.error('Error con unidad:', error);
+      toast({
+        title: '❌ Error',
+        description: `No se pudo ${editingUnidadQuick ? 'actualizar' : 'crear'} la unidad. Inténtalo de nuevo.`,
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsCreatingUnidad(false);
+    }
+  };
+
   return (
     <div className="bg-white rounded-lg border shadow-lg">
       {/* Header del formulario */}
@@ -1659,42 +2012,120 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="flex items-center">
                       <Label htmlFor="id_categoria" className="text-sm font-medium">Categoria</Label>
                     </div>
-                    <Select
-                      value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
-                      onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                        <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categoriasOrdenadas.map((categoria) => (
-                          <SelectItem key={categoria.id} value={categoria.id.toString()}>
-                            {categoria.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-1">
+                      <Select
+                        value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
+                        onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
+                      >
+                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                          <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categoriasOrdenadas.map((categoria) => (
+                            <SelectItem key={categoria.id} value={categoria.id.toString()} className="text-xs group relative">
+                              <div className="flex items-center justify-between w-full pr-6">
+                                <span className="flex-1">{categoria.nombre}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingCategoriaQuick(categoria);
+                                    setShowCategoriaModal(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3 text-blue-600" />
+                                </Button>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                              onClick={() => {
+                                setEditingCategoriaQuick(null);
+                                setShowCategoriaModal(true);
+                              }}
+                            >
+                              <PlusCircle className="h-4 w-4 text-cyan-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Crear nueva categoría</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center">
                       <Label htmlFor="id_tipo_producto" className="text-sm font-medium">Tipo Producto</Label>
                     </div>
-                    <Select
-                      value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
-                      onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                        <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tiposFiltrados.map((tipo) => (
-                          <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"}>
-                            {tipo.nombre}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex gap-1">
+                      <Select
+                        value={formData.id_tipo_producto > 0 ? formData.id_tipo_producto.toString() : ""}
+                        onValueChange={(value) => handleInputChange('id_tipo_producto', parseInt(value))}
+                      >
+                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                          <SelectValue placeholder="Seleccionar tipo" className="text-gray-400" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {tiposFiltrados.map((tipo) => (
+                            <SelectItem key={tipo.id} value={tipo.id?.toString() || "0"} className="text-xs group relative">
+                              <div className="flex items-center justify-between w-full pr-6">
+                                <span className="flex-1">{tipo.nombre}</span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setEditingTipoQuick(tipo);
+                                    setShowTipoModal(true);
+                                  }}
+                                >
+                                  <Edit className="h-3 w-3 text-blue-600" />
+                                </Button>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                              onClick={() => {
+                                setEditingTipoQuick(null);
+                                setShowTipoModal(true);
+                              }}
+                            >
+                              <PlusCircle className="h-4 w-4 text-cyan-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Crear nuevo tipo</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                 </div>
 
@@ -1704,64 +2135,144 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <div className="flex items-center">
                       <Label htmlFor="id_linea" className="text-sm font-medium">Línea</Label>
                     </div>
-                    <Select
-                      value={formData.id_linea?.toString() || "0"}
-                      onValueChange={(value) => handleInputChange('id_linea', parseInt(value))}
-                      disabled={lineasFiltradas.length === 0}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                        <SelectValue placeholder={
-                          lineasFiltradas.length === 0
-                            ? "Seleccione una categoría primero"
-                            : "Seleccionar línea"
-                        } className="text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lineasFiltradas.length === 0 ? (
-                          <SelectItem value="0" disabled>
-                            No hay líneas disponibles
-                          </SelectItem>
-                        ) : (
-                          lineasFiltradas.map((linea) => (
-                            <SelectItem key={linea.id} value={linea.id?.toString() || "0"}>
-                              {linea.nombre}
+                    <div className="flex gap-1">
+                      <Select
+                        value={formData.id_linea?.toString() || "0"}
+                        onValueChange={(value) => handleInputChange('id_linea', parseInt(value))}
+                        disabled={lineasFiltradas.length === 0}
+                      >
+                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                          <SelectValue placeholder={
+                            lineasFiltradas.length === 0
+                              ? "Seleccione una categoría primero"
+                              : "Seleccionar línea"
+                          } className="text-gray-400" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {lineasFiltradas.length === 0 ? (
+                            <SelectItem value="0" disabled className="text-xs">
+                              No hay líneas disponibles
                             </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                          ) : (
+                            lineasFiltradas.map((linea) => (
+                              <SelectItem key={linea.id} value={linea.id?.toString() || "0"} className="text-xs group relative">
+                                <div className="flex items-center justify-between w-full pr-6">
+                                  <span className="flex-1">{linea.nombre}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingLineaQuick(linea);
+                                      setShowLineaModal(true);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3 text-blue-600" />
+                                  </Button>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                              onClick={() => {
+                                setEditingLineaQuick(null);
+                                setShowLineaModal(true);
+                              }}
+                              disabled={!formData.id_categoria || formData.id_categoria === 0}
+                            >
+                              <PlusCircle className="h-4 w-4 text-cyan-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{!formData.id_categoria || formData.id_categoria === 0 ? 'Seleccione una categoría primero' : 'Crear nueva línea'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
 
                   <div className="space-y-1">
                     <div className="flex items-center">
                       <Label htmlFor="id_sublineas" className="text-sm font-medium">Sublínea</Label>
                     </div>
-                    <Select
-                      value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
-                      onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
-                      disabled={sublineasFiltradas.length === 0}
-                    >
-                      <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                        <SelectValue placeholder={
-                          sublineasFiltradas.length === 0
-                            ? "Seleccione una línea primero"
-                            : "Seleccionar sublínea"
-                        } className="text-gray-400" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sublineasFiltradas.length === 0 ? (
-                          <SelectItem value="0" disabled>
-                            No hay sublíneas disponibles
-                          </SelectItem>
-                        ) : (
-                          sublineasFiltradas.map((sublinea) => (
-                            <SelectItem key={sublinea.id} value={sublinea.id.toString()}>
-                              {sublinea.nombre}
+                    <div className="flex gap-1">
+                      <Select
+                        value={formData.id_sublineas > 0 ? formData.id_sublineas.toString() : ""}
+                        onValueChange={(value) => handleInputChange('id_sublineas', parseInt(value))}
+                        disabled={sublineasFiltradas.length === 0}
+                      >
+                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                          <SelectValue placeholder={
+                            sublineasFiltradas.length === 0
+                              ? "Seleccione una línea primero"
+                              : "Seleccionar sublínea"
+                          } className="text-gray-400" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sublineasFiltradas.length === 0 ? (
+                            <SelectItem value="0" disabled className="text-xs">
+                              No hay sublíneas disponibles
                             </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                          ) : (
+                            sublineasFiltradas.map((sublinea) => (
+                              <SelectItem key={sublinea.id} value={sublinea.id.toString()} className="text-xs group relative">
+                                <div className="flex items-center justify-between w-full pr-6">
+                                  <span className="flex-1">{sublinea.nombre}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingSublineaQuick(sublinea);
+                                      setShowSublineaModal(true);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3 text-blue-600" />
+                                  </Button>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                              onClick={() => {
+                                setEditingSublineaQuick(null);
+                                setShowSublineaModal(true);
+                              }}
+                              disabled={!formData.id_linea || formData.id_linea === 0}
+                            >
+                              <PlusCircle className="h-4 w-4 text-cyan-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>{!formData.id_linea || formData.id_linea === 0 ? 'Seleccione una línea primero' : 'Crear nueva sublínea'}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                 </div>
 
@@ -1772,21 +2283,60 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                       <div className="flex items-center">
                         <Label htmlFor="id_medida" className="text-sm font-medium">Unidad</Label>
                       </div>
-                      <Select
-                        value={formData.id_medida && formData.id_medida > 0 ? formData.id_medida.toString() : ""}
-                        onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
-                      >
-                        <SelectTrigger className="h-8 text-sm bg-yellow-25">
-                          <SelectValue placeholder="Seleccionar unidad" className="text-gray-400" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {medidas.filter(medida => medida.estado === 1).map((medida) => (
-                            <SelectItem key={medida.id} value={medida.id.toString()}>
-                              {medida.abreviatura} - {medida.nombre}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-1">
+                        <Select
+                          value={formData.id_medida && formData.id_medida > 0 ? formData.id_medida.toString() : ""}
+                          onValueChange={(value) => handleInputChange('id_medida', parseInt(value))}
+                        >
+                          <SelectTrigger className="h-8 text-sm bg-yellow-25">
+                            <SelectValue placeholder="Seleccionar unidad" className="text-gray-400" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {medidas.filter(medida => medida.estado === 1).map((medida) => (
+                              <SelectItem key={medida.id} value={medida.id.toString()} className="text-xs group relative">
+                                <div className="flex items-center justify-between w-full pr-6">
+                                  <span className="flex-1">{medida.abreviatura} - {medida.nombre}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 p-0 opacity-0 group-hover:opacity-100 transition-opacity absolute right-2 pointer-events-auto"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      setEditingUnidadQuick(medida);
+                                      setShowUnidadModal(true);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3 text-blue-600" />
+                                  </Button>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                                onClick={() => {
+                                  setEditingUnidadQuick(null);
+                                  setShowUnidadModal(true);
+                                }}
+                              >
+                                <PlusCircle className="h-4 w-4 text-cyan-600" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Crear nueva unidad</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                     </div>
 
                     <div className="space-y-1">
@@ -2911,6 +3461,106 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
           </div>
         </form>
       </div>
+
+      {/* Modales de creación/edición rápida con componentes reutilizables */}
+      
+      {/* Modal para crear/editar categoría */}
+      <Dialog open={showCategoriaModal} onOpenChange={(open) => {
+        setShowCategoriaModal(open);
+        if (!open) setEditingCategoriaQuick(null);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <CategoriaFormComponent
+            categoria={editingCategoriaQuick}
+            editingCategoria={editingCategoriaQuick}
+            onSubmit={handleQuickCreateCategoriaSubmit}
+            isLoading={isCreatingCategoria}
+            onCancel={() => {
+              setShowCategoriaModal(false);
+              setEditingCategoriaQuick(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear/editar tipo */}
+      <Dialog open={showTipoModal} onOpenChange={(open) => {
+        setShowTipoModal(open);
+        if (!open) setEditingTipoQuick(null);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <TipoFormComponent
+            tipo={editingTipoQuick}
+            editingTipo={editingTipoQuick}
+            onSubmit={handleQuickCreateTipoSubmit}
+            isLoading={isCreatingTipo}
+            onCancel={() => {
+              setShowTipoModal(false);
+              setEditingTipoQuick(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear/editar línea */}
+      <Dialog open={showLineaModal} onOpenChange={(open) => {
+        setShowLineaModal(open);
+        if (!open) setEditingLineaQuick(null);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <LineaFormComponent
+            linea={editingLineaQuick}
+            editingLinea={editingLineaQuick}
+            categorias={categorias as any}
+            onSubmit={handleQuickCreateLineaSubmit}
+            isLoading={isCreatingLinea}
+            onCancel={() => {
+              setShowLineaModal(false);
+              setEditingLineaQuick(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear/editar sublínea */}
+      <Dialog open={showSublineaModal} onOpenChange={(open) => {
+        setShowSublineaModal(open);
+        if (!open) setEditingSublineaQuick(null);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <SublineaFormComponent
+            sublinea={editingSublineaQuick}
+            editingSublinea={editingSublineaQuick}
+            lineas={lineas as any}
+            onSubmit={handleQuickCreateSublineaSubmit}
+            isLoading={isCreatingSublinea}
+            onCancel={() => {
+              setShowSublineaModal(false);
+              setEditingSublineaQuick(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear/editar unidad */}
+      <Dialog open={showUnidadModal} onOpenChange={(open) => {
+        setShowUnidadModal(open);
+        if (!open) setEditingUnidadQuick(null);
+      }}>
+        <DialogContent className="max-w-6xl max-h-[95vh] overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-300">
+          <MedidaFormComponent
+            medida={editingUnidadQuick}
+            editingMedida={editingUnidadQuick}
+            onSubmit={handleQuickCreateUnidadSubmit}
+            isLoading={isCreatingUnidad}
+            onCancel={() => {
+              setShowUnidadModal(false);
+              setEditingUnidadQuick(null);
+            }}
+            toast={toast}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

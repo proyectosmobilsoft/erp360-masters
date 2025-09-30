@@ -51,7 +51,7 @@ interface MedidaFormComponentProps {
   toast: any; // Función toast para mostrar notificaciones
 }
 
-const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({ 
+export const MedidaFormComponent: React.FC<MedidaFormComponentProps> = ({ 
   medida, 
   editingMedida,
   onSubmit, 

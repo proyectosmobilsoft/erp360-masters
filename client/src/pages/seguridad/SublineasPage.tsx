@@ -49,7 +49,7 @@ interface SublineaFormComponentProps {
   onCancel: () => void;
 }
 
-const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({ 
+export const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({ 
   sublinea, 
   editingSublinea,
   lineas,

@@ -49,7 +49,7 @@ interface LineaFormComponentProps {
   onCancel: () => void;
 }
 
-const LineaFormComponent: React.FC<LineaFormComponentProps> = ({
+export const LineaFormComponent: React.FC<LineaFormComponentProps> = ({
   linea,
   editingLinea,
   categorias,

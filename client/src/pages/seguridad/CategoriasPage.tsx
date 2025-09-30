@@ -51,7 +51,7 @@ interface CategoriaFormComponentProps {
   onCancel: () => void;
 }
 
-const CategoriaFormComponent: React.FC<CategoriaFormComponentProps> = ({ 
+export const CategoriaFormComponent: React.FC<CategoriaFormComponentProps> = ({ 
   categoria, 
   editingCategoria,
   onSubmit, 

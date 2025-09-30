@@ -48,7 +48,7 @@ interface TipoFormComponentProps {
   onCancel: () => void;
 }
 
-const TipoFormComponent: React.FC<TipoFormComponentProps> = ({ 
+export const TipoFormComponent: React.FC<TipoFormComponentProps> = ({ 
   tipo, 
   editingTipo,
   onSubmit, 
