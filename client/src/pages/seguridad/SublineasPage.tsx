@@ -37,13 +37,14 @@ import {
   AlertTriangle,
   Info
 } from 'lucide-react';
-import { sublineasService, SublineaData, SublineaForm, LineaData } from '@/services/sublineasService';
+import { sublineasService, SublineaData, SublineaForm, LineaData, ComponenteMenuData } from '@/services/sublineasService';
 
 // Form Component
 interface SublineaFormComponentProps {
   sublinea?: SublineaData | null;
   editingSublinea?: SublineaData | null;
   lineas: LineaData[];
+  componentesMenu: ComponenteMenuData[];
   onSubmit: (data: SublineaForm) => void;
   isLoading: boolean;
   onCancel: () => void;
@@ -53,12 +54,14 @@ export const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
   sublinea, 
   editingSublinea,
   lineas,
+  componentesMenu,
   onSubmit, 
   isLoading, 
   onCancel
 }) => {
   const [formData, setFormData] = useState<SublineaForm>({
     id_linea: sublinea?.id_linea || 0,
+    id_componente_menu: sublinea?.id_componente_menu || null,
     codigo: sublinea?.codigo || "",
     nombre: sublinea?.nombre || "",
   });
@@ -86,6 +89,7 @@ export const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
     setFormData({
       id: sublinea?.id || 0,
       id_linea: sublinea?.id_linea || 0,
+      id_componente_menu: sublinea?.id_componente_menu || null,
       codigo: sublinea?.codigo || "",
       nombre: sublinea?.nombre || "",
     });
@@ -141,7 +145,7 @@ export const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
             </div>
 
             {/* Nombre */}
-            <div className="col-span-7 space-y-2">
+            <div className="col-span-4 space-y-2">
               <Label htmlFor="nombre" className="text-sm font-medium">Nombre *</Label>
               <Input
                 id="nombre"
@@ -167,6 +171,27 @@ export const SublineaFormComponent: React.FC<SublineaFormComponentProps> = ({
                   {lineas.map((linea) => (
                     <SelectItem key={linea.id} value={linea.id.toString()}>
                       {linea.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Componente Menú */}
+            <div className="col-span-3 space-y-2">
+              <Label htmlFor="id_componente_menu" className="text-sm font-medium">Componente Menú</Label>
+              <Select
+                value={formData.id_componente_menu?.toString() || "0"}
+                onValueChange={(value) => handleInputChange('id_componente_menu', value === "0" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="Seleccione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Sin componente</SelectItem>
+                  {componentesMenu.map((componente) => (
+                    <SelectItem key={componente.id} value={componente.id.toString()}>
+                      {componente.nombre}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -239,6 +264,11 @@ const SublineasPage: React.FC = () => {
   const { data: lineas = [] } = useQuery({
     queryKey: ["lineas"],
     queryFn: sublineasService.listLineas,
+  });
+
+  const { data: componentesMenu = [] } = useQuery({
+    queryKey: ["componentesMenu"],
+    queryFn: sublineasService.listComponentesMenu,
   });
 
   // Mutations
@@ -496,13 +526,14 @@ const SublineasPage: React.FC = () => {
                       <TableHead className="px-4 py-3 w-20 text-center">Código</TableHead>
                       <TableHead className="px-4 py-3 text-center">Nombre</TableHead>
                       <TableHead className="px-4 py-3 text-center">Línea</TableHead>
+                      <TableHead className="px-4 py-3 text-center">Componente Menú</TableHead>
                       <TableHead className="px-4 py-3 w-24 text-center">Estado</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
+                        <TableCell colSpan={6} className="h-24 text-center">
                           <div className="flex items-center justify-center">
                             <Loader2 className="h-6 w-6 animate-spin mr-2" />
                             Cargando sublíneas...
@@ -511,7 +542,7 @@ const SublineasPage: React.FC = () => {
                       </TableRow>
                     ) : sublineasFiltradas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center">
+                        <TableCell colSpan={6} className="h-24 text-center">
                           No hay sublíneas disponibles.
                         </TableCell>
                       </TableRow>
@@ -700,6 +731,9 @@ const SublineasPage: React.FC = () => {
                           <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
                             {sublinea.inv_lineas?.nombre || "-"}
                           </TableCell>
+                          <TableCell className="px-3 py-2 text-sm text-gray-900 text-left">
+                            {sublinea.prod_componentes_menus?.nombre || "-"}
+                          </TableCell>
                           <TableCell className="px-3 py-2 text-left">
                             <Badge
                               variant={sublinea.estado === 1 ? "default" : "secondary"}
@@ -727,6 +761,7 @@ const SublineasPage: React.FC = () => {
             sublinea={editingSublinea}
             editingSublinea={editingSublinea}
             lineas={lineas}
+            componentesMenu={componentesMenu}
             onSubmit={(data) => {
               if (editingSublinea) {
                 updateSublineaMutation.mutate({ id: editingSublinea.id!, data });

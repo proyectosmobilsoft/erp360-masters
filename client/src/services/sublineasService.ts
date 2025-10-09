@@ -3,10 +3,15 @@ import { supabase } from './supabaseClient';
 export interface SublineaData {
   id: number;
   id_linea: number;
+  id_componente_menu?: number | null;
   codigo: string;
   nombre: string;
   estado: number;
   inv_lineas?: {
+    id: number;
+    nombre: string;
+  };
+  prod_componentes_menus?: {
     id: number;
     nombre: string;
   };
@@ -15,12 +20,18 @@ export interface SublineaData {
 export interface SublineaForm {
   id?: number;
   id_linea: number;
+  id_componente_menu?: number | null;
   codigo: string;
   nombre: string;
   estado?: number;
 }
 
 export interface LineaData {
+  id: number;
+  nombre: string;
+}
+
+export interface ComponenteMenuData {
   id: number;
   nombre: string;
 }
@@ -35,6 +46,10 @@ export const listSublineas = async (): Promise<SublineaData[]> => {
       .select(`
         *,
         inv_lineas!id_linea (
+          id,
+          nombre
+        ),
+        prod_componentes_menus!id_componente_menu (
           id,
           nombre
         )
@@ -77,6 +92,28 @@ export const listLineas = async (): Promise<LineaData[]> => {
 };
 
 /**
+ * Lista todos los componentes de menú para el select
+ */
+export const listComponentesMenu = async (): Promise<ComponenteMenuData[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('prod_componentes_menus')
+      .select('id, nombre')
+      .order('nombre', { ascending: true });
+
+    if (error) {
+      console.error('Error al obtener componentes de menú:', error);
+      throw error;
+    }
+
+    return data as unknown as ComponenteMenuData[];
+  } catch (error) {
+    console.error('Error en listComponentesMenu:', error);
+    throw error;
+  }
+};
+
+/**
  * Crea una nueva sublínea
  */
 export const createSublinea = async (sublinea: SublineaData): Promise<SublineaData> => {
@@ -87,6 +124,10 @@ export const createSublinea = async (sublinea: SublineaData): Promise<SublineaDa
       .select(`
         *,
         inv_lineas!id_linea (
+          id,
+          nombre
+        ),
+        prod_componentes_menus!id_componente_menu (
           id,
           nombre
         )
@@ -117,6 +158,10 @@ export const updateSublinea = async (id: number, sublinea: Partial<SublineaData>
       .select(`
         *,
         inv_lineas!id_linea (
+          id,
+          nombre
+        ),
+        prod_componentes_menus!id_componente_menu (
           id,
           nombre
         )
@@ -265,6 +310,7 @@ export const getNextCodigo = async (): Promise<string> => {
 export const sublineasService = {
   listSublineas,
   listLineas,
+  listComponentesMenu,
   createSublinea,
   updateSublinea,
   activateSublinea,
