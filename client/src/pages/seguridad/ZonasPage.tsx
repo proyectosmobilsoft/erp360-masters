@@ -646,6 +646,7 @@ const ZonasPage = () => {
                 </TableBody>
               </Table>
             </div>
+            </CardContent>
           </div>
         </TabsContent>
 

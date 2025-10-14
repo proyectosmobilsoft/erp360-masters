@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus, Search, Building2, Save, RefreshCw, Loader2, Lock, CheckCircle, Building, ImagePlus, ChevronDown, ChevronRight, Package, ChefHat } from 'lucide-react';
+import { Edit, Trash2, Plus, Search, Building2, Save, RefreshCw, Loader2, Lock, CheckCircle, Building, ImagePlus, ChevronDown, ChevronRight, Package, ChefHat, UtensilsCrossed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,6 +51,7 @@ const UnidadServiciosPage: React.FC = () => {
   const [editingUnidad, setEditingUnidad] = useState<UnidadServicioData | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Consulta de unidades de servicio
   const { data: unidadesServicio = [], isLoading } = useQuery({
@@ -283,6 +284,24 @@ const UnidadServiciosPage: React.FC = () => {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['unidades-servicio'] });
+      await queryClient.refetchQueries({ queryKey: ['unidades-servicio'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="p-4 max-w-full mx-auto">
       <div className="flex items-center justify-between">
@@ -310,58 +329,75 @@ const UnidadServiciosPage: React.FC = () => {
         <TabsContent value="unidades" className="mt-6">
           {/* Header similar a perfiles */}
           <div className="bg-white rounded-lg border">
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-orange-600" />
-                </div>
-                <span className="text-lg font-semibold text-gray-700">UNIDAD SERVICIOS</span>
-              </div>
-              <div className="flex space-x-2">
-                <Can action="accion-crear-unidad-servicio">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Unidad Servicios
+                </CardTitle>
+                <div className="flex items-center gap-2">
                   <Button
-                    onClick={handleCrearUnidad}
-                    className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
+                    onClick={handleRefresh}
+                    variant="outline"
                     size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
                   >
-                    Adicionar Registro
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
                   </Button>
-                </Can>
+                  <Can action="accion-crear-unidad-servicio">
+                    <Button
+                      onClick={handleCrearUnidad}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nueva Unidad
+                    </Button>
+                  </Can>
+                </div>
+              </div>
+            </CardHeader>
+
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar por nombre, código o sucursal..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                      autoComplete="off"
+                    />
+                  </div>
+                </div>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="active">Activos</SelectItem>
+                      <SelectItem value="inactive">Inactivos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            {/* Filtros y búsqueda */}
-            <div className="flex flex-wrap items-center gap-4 p-3 bg-cyan-50 rounded-lg mb-4 shadow-sm">
-              <div className="flex-1 min-w-[200px]">
-                <Input
-                  placeholder="Buscar por nombre, código o sucursal..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
-                  autoComplete="off"
-                />
-              </div>
-              <div className="min-w-[180px]">
-                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="active">Solo activos</SelectItem>
-                    <SelectItem value="inactive">Solo inactivos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <div className="p-6">
 
             {/* Tabla de unidades de servicio */}
             <div className="relative overflow-x-auto rounded-lg shadow-sm">
-              {isLoading && (
+              {(isLoading || isRefreshing) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
                   <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="animate-spin h-10 w-10 text-cyan-600" />
-                    <span className="text-cyan-700 font-semibold">Cargando unidades de servicio...</span>
+                    <Loader2 className="animate-spin h-10 w-10 text-teal-600" />
+                    <span className="text-gray-600 font-semibold">{isRefreshing ? 'Actualizando unidades de servicio...' : 'Cargando unidades de servicio...'}</span>
                   </div>
                 </div>
               )}
@@ -377,7 +413,7 @@ const UnidadServiciosPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!isLoading && (unidadesFiltradas.length === 0 ? (
+                  {!(isLoading || isRefreshing) && (unidadesFiltradas.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
                         No hay unidades de servicio disponibles.
