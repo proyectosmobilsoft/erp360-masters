@@ -49,7 +49,7 @@ export const listSublineas = async (): Promise<SublineaData[]> => {
           id,
           nombre
         ),
-        prod_componentes_menus!id_componente_menu (
+        prod_componentes_menus!inv_sublineas_id_componente_menu_fkey (
           id,
           nombre
         )
@@ -127,7 +127,7 @@ export const createSublinea = async (sublinea: SublineaData): Promise<SublineaDa
           id,
           nombre
         ),
-        prod_componentes_menus!id_componente_menu (
+        prod_componentes_menus!inv_sublineas_id_componente_menu_fkey (
           id,
           nombre
         )
@@ -161,7 +161,7 @@ export const updateSublinea = async (id: number, sublinea: Partial<SublineaData>
           id,
           nombre
         ),
-        prod_componentes_menus!id_componente_menu (
+        prod_componentes_menus!inv_sublineas_id_componente_menu_fkey (
           id,
           nombre
         )

@@ -863,6 +863,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       id_color: producto?.id_color || undefined,
       referencia: producto?.referencia || "",
       id_clase_servicio: producto?.id_clase_servicio || undefined,
+      tipo_menu: producto?.tipo_menu || "",
+      no_ciclo: producto?.no_ciclo || 0,
       ultimo_costo: producto?.ultimo_costo || 0,
       id_proveedor: producto?.id_proveedor || undefined,
       frecuencia: producto?.frecuencia?.toString() || "semanal",
@@ -893,6 +895,8 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         id_marca: editingProducto.id_marca || undefined,
         id_color: editingProducto.id_color || undefined,
         id_clase_servicio: editingProducto.id_clase_servicio || undefined,
+        tipo_menu: editingProducto.tipo_menu || "",
+        no_ciclo: editingProducto.no_ciclo || 0,
         id_proveedor: editingProducto.id_proveedor || undefined,
         referencia: editingProducto.referencia || "",
         ultimo_costo: editingProducto.ultimo_costo || 0,
@@ -920,7 +924,17 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
         
         // Filtrar sublíneas por línea
         const sublineasDeLinea = sublineas.filter(sub => sub.id_linea === idLinea);
-        setSublineasFiltradas(sublineasDeLinea);
+        
+        // Buscar la sublínea específica del producto
+        const sublineaEspecifica = sublineas.find(sub => sub.id === editingProducto.id_sublineas);
+        
+        // En modo edición, incluir la sublínea específica del producto aunque no esté en la línea filtrada
+        let sublineasFinales = sublineasDeLinea;
+        if (editingProducto && sublineaEspecifica && !sublineasDeLinea.find(sub => sub.id === editingProducto.id_sublineas)) {
+          sublineasFinales = [sublineaEspecifica, ...sublineasDeLinea];
+        }
+        
+        setSublineasFiltradas(sublineasFinales);
         
         // Establecer valores con timeout para asegurar que los selects estén listos
         setTimeout(() => {
@@ -936,6 +950,81 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       }
     }
   }, [editingProducto, lineas, sublineas]);
+
+  // Resetear formulario cuando se cancela la edición o se crea nuevo
+  React.useEffect(() => {
+    if (!editingProducto) {
+      console.log('🔄 Reseteando formulario - editingProducto es null');
+      setFormData({
+        id: 0,
+        codigo: "",
+        nombre: "",
+        id_medida: 0,
+        id_tipo_producto: 0,
+        id_categoria: 0,
+        id_linea: 0,
+        id_sublineas: 0,
+        id_interfaz_contable: undefined,
+        id_marca: undefined,
+        id_color: undefined,
+        referencia: "",
+        id_clase_servicio: undefined,
+        tipo_menu: "",
+        no_ciclo: 0,
+        ultimo_costo: 0,
+        id_proveedor: undefined,
+        frecuencia: "semanal",
+        controla_existencia: 0,
+        controla_lotes: 0,
+        imgbase64: "",
+      });
+    }
+  }, [editingProducto]);
+
+  // Preseleccionar categoría de receta cuando esReceta es true y estamos creando (no editando)
+  React.useEffect(() => {
+    console.log('🔍 useEffect categoría receta - esReceta:', esReceta, 'editingProducto:', editingProducto, 'categorias:', categorias.length);
+    
+    if (esReceta && !editingProducto && categorias.length > 0) {
+      // Buscar la primera categoría que sea de receta
+      const categoriaReceta = categorias.find(cat => cat.isreceta === 1);
+      console.log('🔍 Categoría de receta encontrada:', categoriaReceta);
+      
+      if (categoriaReceta) {
+        setFormData(prev => {
+          console.log('🔍 formData.id_categoria actual:', prev.id_categoria);
+          // Solo actualizar si la categoría actual no es de receta
+          if (prev.id_categoria === 0 || categorias.find(cat => cat.id === prev.id_categoria)?.isreceta !== 1) {
+            console.log('🍽️ Preseleccionando categoría de receta:', categoriaReceta.nombre, 'ID:', categoriaReceta.id);
+            return {
+              ...prev,
+              id_categoria: categoriaReceta.id
+            };
+          }
+          console.log('✅ Ya tiene una categoría de receta seleccionada');
+          return prev;
+        });
+      } else {
+        console.log('⚠️ No se encontró ninguna categoría de receta');
+      }
+    }
+    // Si no es receta y estamos creando, resetear la categoría si es de receta
+    if (!esReceta && !editingProducto && categorias.length > 0) {
+      setFormData(prev => {
+        const categoriaActual = categorias.find(cat => cat.id === prev.id_categoria);
+        if (categoriaActual?.isreceta === 1) {
+          console.log('🔄 Reseteando categoría porque ya no es receta');
+          return {
+            ...prev,
+            id_categoria: 0,
+            id_linea: 0,
+            id_sublineas: 0
+          };
+        }
+        return prev;
+      });
+    }
+  }, [esReceta, editingProducto, categorias]);
 
   // Filtrar líneas cuando cambie la categoría
   React.useEffect(() => {
@@ -1371,9 +1460,32 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
     );
   }, [presentacionesMedidas, formData.id_medida]);
 
-  // Ordenar categorías mostrando primero las que tienen isreceta=1, luego isreceta=0
+  // Filtrar y ordenar categorías según si es receta o no
   const categoriasOrdenadas = useMemo(() => {
-    return [...categorias].sort((a, b) => {
+    let categoriasFiltradas = [...categorias];
+    
+    // Si NO es receta (switch apagado), filtrar para no mostrar categorías de receta
+    if (!esReceta && !editingProducto) {
+      categoriasFiltradas = categoriasFiltradas.filter(cat => cat.isreceta !== 1);
+      console.log('🔍 Filtrando categorías - No es receta, mostrando solo categorías normales');
+    }
+    // Si ES receta (switch activado), mostrar solo categorías de receta
+    else if (esReceta && !editingProducto) {
+      categoriasFiltradas = categoriasFiltradas.filter(cat => cat.isreceta === 1);
+      console.log('🔍 Filtrando categorías - Es receta, mostrando solo categorías de receta');
+    }
+    // Si está editando un PRODUCTO (no receta), no mostrar categorías de receta
+    else if (editingProducto && !esReceta) {
+      categoriasFiltradas = categoriasFiltradas.filter(cat => cat.isreceta !== 1);
+      console.log('🔍 Filtrando categorías - Editando producto, mostrando solo categorías normales');
+    }
+    // Si está editando una RECETA, mostrar solo su categoría actual
+    else if (editingProducto && esReceta) {
+      categoriasFiltradas = categoriasFiltradas.filter(cat => cat.isreceta === 1);
+      console.log('🔍 Filtrando categorías - Editando receta, mostrando solo categorías de receta');
+    }
+    
+    return categoriasFiltradas.sort((a, b) => {
       // Primero las que tienen isreceta=1, luego las que tienen isreceta=0
       if (a.isreceta !== b.isreceta) {
         return b.isreceta - a.isreceta; // 1 primero, luego 0
@@ -1381,7 +1493,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
       // Si tienen el mismo isreceta, ordenar por nombre
       return a.nombre.localeCompare(b.nombre);
     });
-  }, [categorias]);
+  }, [categorias, esReceta, editingProducto]);
 
   // Filtrar tipos de producto según si es receta o no y solo mostrar activos
   const tiposFiltrados = useMemo(() => {
@@ -2071,6 +2183,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                     <Select
                       value={formData.id_categoria > 0 ? formData.id_categoria.toString() : ""}
                       onValueChange={(value) => handleInputChange('id_categoria', parseInt(value))}
+                      disabled={esReceta}
                     >
                       <SelectTrigger className="h-8 text-sm bg-yellow-25">
                         <SelectValue placeholder="Seleccionar categoría" className="text-gray-400" />
@@ -2107,6 +2220,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                               variant="outline"
                               size="icon"
                               className="h-8 w-8 border-cyan-300 hover:bg-cyan-50 hover:border-cyan-400 transition-all duration-200"
+                              disabled={esReceta}
                               onClick={() => {
                                 setEditingCategoriaQuick(null);
                                 setShowCategoriaModal(true);
@@ -2116,7 +2230,7 @@ const ProductoFormComponent: React.FC<ProductoFormComponentProps> = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Crear nueva categoría</p>
+                            <p>{esReceta ? 'Categoría fija para recetas' : 'Crear nueva categoría'}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -3806,7 +3920,8 @@ const ProductosPage: React.FC = () => {
         { key: 'acciones', label: 'Acciones', className: 'px-1 py-1 text-teal-600 w-12 text-center' },
         { key: 'codigo_nombre', label: 'Código / Nombre', className: 'px-4 py-3 w-64 text-center' },
         { key: 'tipo_servicio', label: 'Tipo Servicio', className: 'px-4 py-3 w-40 text-center' },
-        { key: 'linea_sublinea', label: 'Línea / Sublínea', className: 'px-4 py-3 w-32 text-center' },
+        { key: 'linea_sublinea', label: 'Línea / Sublínea', className: 'px-4 py-3 w-40 text-center' },
+        { key: 'tiempo_preparacion', label: 'Tiempo Prep.', className: 'px-4 py-3 w-32 text-center' },
         { key: 'tipo_producto', label: 'Tipo Menu', className: 'px-4 py-3 w-24 text-center' },
         { key: 'estado', label: 'Estado', className: 'px-4 py-3 w-24 text-center' }
       ];
@@ -3981,19 +4096,38 @@ const ProductosPage: React.FC = () => {
         );
       
       case 'codigo_nombre':
+        // Si es receta (id_clase_servicio > 0), mostrar nombre arriba y resaltado en azul
+        if (producto.id_clase_servicio && producto.id_clase_servicio > 0) {
+          return (
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-blue-600 text-left">
+                {producto.nombre}
+              </span>
+              <div className="flex items-center justify-start gap-2 mt-1">
+                <span className="text-xs text-gray-600">
+                  {producto.codigo || "-"}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {producto.inv_categorias?.nombre || "-"}
+                </span>
+              </div>
+            </div>
+          );
+        }
+        // Producto normal: nombre arriba pero sin resaltar en azul
         return (
           <div className="flex flex-col">
-            <div className="flex items-center justify-start gap-2">
-              <span className="text-xs font-medium text-gray-900">
+            <span className="text-xs font-medium text-gray-900 text-left">
+              {producto.nombre}
+            </span>
+            <div className="flex items-center justify-start gap-2 mt-1">
+              <span className="text-xs text-gray-600">
                 {producto.codigo || "-"}
               </span>
-              <span className="text-xs text-blue-600 font-medium">
+              <span className="text-xs text-blue-600">
                 {producto.inv_categorias?.nombre || "-"}
               </span>
             </div>
-            <span className="text-xs text-gray-600 mt-1 text-left">
-              {producto.nombre}
-            </span>
           </div>
         );
       
@@ -4024,12 +4158,25 @@ const ProductosPage: React.FC = () => {
       case 'linea_sublinea':
         return (
           <div className="flex flex-col">
-            <span className="text-xs text-gray-900">
+            <span className="text-xs font-medium text-gray-900">
               {producto.inv_sublineas?.inv_lineas?.nombre || "-"}
             </span>
-            <span className="text-xs text-gray-600 mt-1">
+            <span className="text-xs text-blue-600 mt-1">
               {producto.inv_sublineas?.nombre || "-"}
             </span>
+          </div>
+        );
+      
+      case 'tiempo_preparacion':
+        return (
+          <div className="text-center">
+            {producto.inv_utilidades_producto && producto.inv_utilidades_producto.length > 0 && producto.inv_utilidades_producto[0].tiempo_preparacion ? (
+              <span className="text-xs font-medium text-purple-600">
+                {producto.inv_utilidades_producto[0].tiempo_preparacion}
+              </span>
+            ) : (
+              <span className="text-xs text-gray-400">Sin tiempo</span>
+            )}
           </div>
         );
       
@@ -4515,8 +4662,18 @@ const ProductosPage: React.FC = () => {
   };
 
   const handleNuevoProducto = () => {
+    console.log('📝 handleNuevoProducto - verMenus:', verMenus);
     setEditingProducto(null);
     setActiveTab("formulario");
+    
+    // Si el switch "Ver Menús" está activo, establecer que es una receta
+    if (verMenus) {
+      console.log('🍽️ Estableciendo esReceta = true');
+      setEsReceta(true);
+    } else {
+      console.log('📦 Estableciendo esReceta = false');
+      setEsReceta(false);
+    }
   };
 
   const handleActivateProducto = (id: number) => {
@@ -4611,12 +4768,20 @@ const ProductosPage: React.FC = () => {
                   <Label htmlFor="ver-menus" className="text-sm font-medium text-cyan-600">
                     Ver Menús
                   </Label>
-                  <Switch
-                    id="ver-menus"
-                    checked={verMenus}
-                    onCheckedChange={handleVerMenusChange}
-                    className="data-[state=checked]:bg-cyan-600 hover:bg-cyan-100 hover:shadow-md transition-all duration-200"
-                  />
+                  <div className="relative inline-block">
+                    <Switch
+                      id="ver-menus"
+                      checked={verMenus}
+                      onCheckedChange={handleVerMenusChange}
+                      disabled={isFiltering}
+                      className="switch-ver-menus data-[state=checked]:bg-cyan-600 transition-all duration-200"
+                    />
+                    {isFiltering && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full pointer-events-none">
+                        <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -4734,6 +4899,8 @@ const ProductosPage: React.FC = () => {
             onCancel={() => {
               setEditingProducto(null);
               setActiveTab("productos");
+              // Resetear esReceta basándose en el estado del switch
+              setEsReceta(verMenus);
             }}
           />
         </TabsContent>
