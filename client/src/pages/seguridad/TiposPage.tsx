@@ -35,7 +35,8 @@ import {
   CheckCircle,
   Trash2,
   AlertTriangle,
-  Info
+  Info,
+  UtensilsCrossed
 } from 'lucide-react';
 import { tiposService, TipoData, TipoForm } from '@/services/tiposService';
 
@@ -203,6 +204,7 @@ const TiposPage: React.FC = () => {
   const [editingTipo, setEditingTipo] = useState<TipoData | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("active");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { toast } = useToast();
   const { startLoading, stopLoading } = useLoading();
@@ -399,6 +401,24 @@ const TiposPage: React.FC = () => {
     deleteTipoMutation.mutate(id);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['tipos'] });
+      await queryClient.refetchQueries({ queryKey: ['tipos'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="p-4 max-w-full mx-auto">
       <div className="flex items-center justify-between">
@@ -429,28 +449,39 @@ const TiposPage: React.FC = () => {
 
         <TabsContent value="tipos" className="mt-6">
           <Card className="bg-white shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-200">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
               <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Tipos de Producto
+                </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-cyan-600" />
-                  <span className="text-lg font-semibold text-gray-700">TIPOS</span>
-                </div>
-                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleRefresh}
+                    variant="outline"
+                    size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </Button>
                   <Can action="accion-crear-tipo">
                     <Button
                       onClick={handleCrearTipo}
-                      className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
-                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
                     >
-                      Adicionar Registro
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nuevo Tipo
                     </Button>
                   </Can>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
-              {/* Filtros */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -458,12 +489,12 @@ const TiposPage: React.FC = () => {
                       placeholder="Buscar por código o nombre..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10"
+                      className="pl-10"
                     />
                   </div>
                 </div>
-                <div className="min-w-[180px]">
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por estado" />
                     </SelectTrigger>
@@ -475,7 +506,9 @@ const TiposPage: React.FC = () => {
                   </Select>
                 </div>
               </div>
+            </div>
 
+            <CardContent className="p-6">
               {/* Tabla */}
               <div className="rounded-md border">
                 <Table>
@@ -489,12 +522,12 @@ const TiposPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
+                    {(isLoading || isRefreshing) ? (
                       <TableRow>
                         <TableCell colSpan={5} className="h-24 text-center">
                           <div className="flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                            Cargando tipos...
+                            <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+                            <span className="text-gray-600">{isRefreshing ? 'Actualizando tipos...' : 'Cargando tipos...'}</span>
                           </div>
                         </TableCell>
                       </TableRow>

@@ -50,7 +50,8 @@ import {
   ChevronDown,
   Eye,
   X,
-  PlusCircle
+  PlusCircle,
+  UtensilsCrossed
 } from 'lucide-react';
 import { productosService, ProductoData, ProductoForm, CategoriaData, UtilidadProducto } from '@/services/productosService';
 import { MedidaData, medidasService } from '@/services/medidasService';
@@ -3810,6 +3811,7 @@ const ProductosPage: React.FC = () => {
   const [esReceta, setEsReceta] = useState<boolean>(false);
   const [verMenus, setVerMenus] = useState<boolean>(false); // Filtro para mostrar solo recetas
   const [isFiltering, setIsFiltering] = useState<boolean>(false); // Loading para el filtro
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Estados para modal de ingredientes de receta
   const [showIngredientesModal, setShowIngredientesModal] = useState(false);
@@ -4688,6 +4690,24 @@ const ProductosPage: React.FC = () => {
     deleteProductoMutation.mutate(id);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['productos'] });
+      await queryClient.refetchQueries({ queryKey: ['productos'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="p-4 max-w-full mx-auto overflow-x-hidden">
       <div className="flex items-center justify-between">
@@ -4718,28 +4738,39 @@ const ProductosPage: React.FC = () => {
 
         <TabsContent value="productos" className="mt-6">
           <Card className="bg-white shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-200">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
               <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Productos/Recetas
+                </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Package className="w-5 h-5 text-cyan-600" />
-                  <span className="text-lg font-semibold text-gray-700">PRODUCTOS/RECETAS</span>
-                </div>
-                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleRefresh}
+                    variant="outline"
+                    size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </Button>
                   <Can action="accion-crear-producto">
                     <Button
                       onClick={handleNuevoProducto}
-                      className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
-                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
                     >
-                      Adicionar Registro
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nuevo Producto/Receta
                     </Button>
                   </Can>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
-              {/* Filtros */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -4747,13 +4778,13 @@ const ProductosPage: React.FC = () => {
                       placeholder="Buscar por código, nombre, referencia, medida, categoría o sublínea..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10"
+                      className="pl-10"
                       autoComplete="off"
                     />
                   </div>
                 </div>
-                <div className="min-w-[180px]">
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por estado" />
                     </SelectTrigger>
@@ -4765,7 +4796,7 @@ const ProductosPage: React.FC = () => {
                   </Select>
                 </div>
                 <div className="flex items-center gap-2 min-w-[140px]">
-                  <Label htmlFor="ver-menus" className="text-sm font-medium text-cyan-600">
+                  <Label htmlFor="ver-menus" className="text-sm font-medium text-teal-600">
                     Ver Menús
                   </Label>
                   <div className="relative inline-block">
@@ -4774,17 +4805,19 @@ const ProductosPage: React.FC = () => {
                       checked={verMenus}
                       onCheckedChange={handleVerMenusChange}
                       disabled={isFiltering}
-                      className="switch-ver-menus data-[state=checked]:bg-cyan-600 transition-all duration-200"
+                      className="switch-ver-menus data-[state=checked]:bg-teal-600 transition-all duration-200"
                     />
                     {isFiltering && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full pointer-events-none">
-                        <Loader2 className="h-4 w-4 animate-spin text-cyan-600" />
+                        <Loader2 className="h-4 w-4 animate-spin text-teal-600" />
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+            </div>
 
+            <CardContent className="p-6">
               {/* Tabla */}
               <div className="rounded-md border">
                 <Table>
@@ -4798,12 +4831,14 @@ const ProductosPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading || isFiltering ? (
+                    {(isLoading || isFiltering || isRefreshing) ? (
                       <TableRow>
                         <TableCell colSpan={getTableColumns().length} className="h-24 text-center">
                           <div className="flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                            {isFiltering ? 'Filtrando productos...' : 'Cargando productos...'}
+                            <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+                            <span className="text-gray-600">
+                              {isRefreshing ? 'Actualizando productos...' : (isFiltering ? 'Filtrando productos...' : 'Cargando productos...')}
+                            </span>
                           </div>
                         </TableCell>
                       </TableRow>

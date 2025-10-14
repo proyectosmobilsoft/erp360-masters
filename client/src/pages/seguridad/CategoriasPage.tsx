@@ -38,7 +38,8 @@ import {
   Info,
   Upload,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  UtensilsCrossed
 } from 'lucide-react';
 import { categoriasService, CategoriaData, CategoriaForm } from '@/services/categoriasService';
 
@@ -467,6 +468,7 @@ const CategoriasPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [activeTab, setActiveTab] = useState("categorias");
   const [editingCategoria, setEditingCategoria] = useState<CategoriaData | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Queries
   const { data: categorias = [], isLoading } = useQuery({
@@ -648,6 +650,24 @@ const CategoriasPage: React.FC = () => {
     deleteCategoriaMutation.mutate(id);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['categorias'] });
+      await queryClient.refetchQueries({ queryKey: ['categorias'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="p-4 max-w-full mx-auto">
       <div className="flex items-center justify-between">
@@ -678,28 +698,39 @@ const CategoriasPage: React.FC = () => {
 
         <TabsContent value="categorias" className="mt-6">
           <Card className="bg-white shadow-lg border-0">
-            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-200">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
               <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Categorías
+                </CardTitle>
                 <div className="flex items-center gap-2">
-                  <Tag className="w-5 h-5 text-cyan-600" />
-                  <span className="text-lg font-semibold text-gray-700">CATEGORÍAS</span>
-                </div>
-                <div className="flex space-x-2">
+                  <Button
+                    onClick={handleRefresh}
+                    variant="outline"
+                    size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+                  >
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
+                  </Button>
                   <Can action="accion-crear-categoria">
                     <Button
                       onClick={handleNuevaCategoria}
-                      className="bg-brand-lime hover:bg-green-500 hover:shadow-md transition-all duration-200"
-                      size="sm"
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
                     >
-                      Adicionar Registro
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nueva Categoría
                     </Button>
                   </Can>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
-              {/* Filtros */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -707,13 +738,12 @@ const CategoriasPage: React.FC = () => {
                       placeholder="Buscar por ID o nombre..."
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10"
-                      autoComplete="off"
+                      className="pl-10"
                     />
                   </div>
                 </div>
-                <div className="min-w-[180px]">
-                  <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Filtrar por estado" />
                     </SelectTrigger>
@@ -725,7 +755,9 @@ const CategoriasPage: React.FC = () => {
                   </Select>
                 </div>
               </div>
+            </div>
 
+            <CardContent className="p-6">
               {/* Tabla */}
               <div className="rounded-md border">
                 <Table>
@@ -740,12 +772,12 @@ const CategoriasPage: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoading ? (
+                    {(isLoading || isRefreshing) ? (
                       <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
                           <div className="flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                            Cargando categorías...
+                            <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+                            <span className="text-gray-600">{isRefreshing ? 'Actualizando categorías...' : 'Cargando categorías...'}</span>
                           </div>
                         </TableCell>
                       </TableRow>
