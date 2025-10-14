@@ -716,3 +716,29 @@ main *, .border-input {
 .no-hover-effect:hover {
   background-color: transparent !important;
 }
+
+/* Estilos personalizados para el switch "Ver Menús" */
+.switch-ver-menus {
+  height: 32px !important;
+  width: 60px !important;
+  border-width: 6px !important;
+}
+
+.switch-ver-menus:hover:not(:disabled) {
+  background-color: #9ca3af !important; /* gris no tan pálido */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.switch-ver-menus[data-state="checked"]:hover:not(:disabled) {
+  background-color: #0891b2 !important; /* cyan más oscuro en hover */
+}
+
+/* Ajustar el thumb del switch para que sea proporcional */
+.switch-ver-menus > span {
+  height: 24px !important;
+  width: 24px !important;
+}
+
+.switch-ver-menus > span[data-state="checked"] {
+  transform: translateX(28px) !important;
+}

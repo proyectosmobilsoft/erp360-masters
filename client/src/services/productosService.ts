@@ -119,6 +119,12 @@ export interface ProductoData {
       nombre: string;
     };
   };
+  inv_utilidades_producto?: Array<{
+    id: number;
+    tiempo_preparacion?: string;
+    tasa_perdida?: number;
+    tasa_utilidad?: number;
+  }>;
 }
 
 export interface ProductoForm {
@@ -194,6 +200,12 @@ export const listProductos = async (soloRecetas?: boolean): Promise<ProductoData
             id,
             nombre
           )
+        ),
+        inv_utilidades_producto!id_producto (
+          id,
+          tiempo_preparacion,
+          tasa_perdida,
+          tasa_utilidad
         )
       `)
       .order('id', { ascending: false });
