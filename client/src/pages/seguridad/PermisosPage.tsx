@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Plus, Search, Shield, Save, RefreshCw, Loader2, Lock, CheckCircle, Eye, X, Settings, Pause, Play, Trash, AlertTriangle, Info } from "lucide-react";
+import { Edit, Trash2, Plus, Search, Shield, Save, RefreshCw, Loader2, Lock, CheckCircle, Eye, X, Settings, Pause, Play, Trash, AlertTriangle, Info, UtensilsCrossed } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -59,6 +59,7 @@ const PermisosPage: React.FC = () => {
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [permisoParaEliminar, setPermisoParaEliminar] = useState<ModuloPermiso | null>(null);
   const [showDeletePermisoModal, setShowDeletePermisoModal] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { toast } = useToast();
   const { startLoading, stopLoading } = useLoading();
@@ -391,6 +392,24 @@ const PermisosPage: React.FC = () => {
     setShowDeletePermisoModal(true);
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['modulos'] });
+      await queryClient.refetchQueries({ queryKey: ['modulos'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const confirmarEliminacionPermiso = async () => {
     if (!permisoParaEliminar) return;
     
@@ -475,61 +494,78 @@ const PermisosPage: React.FC = () => {
         <TabsContent value="modulos" className="mt-6">
           {/* Header */}
           <div className="bg-white rounded-lg border">
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
-                  <Shield className="w-5 h-5 text-orange-600" />
-                </div>
-                <span className="text-lg font-semibold text-gray-700">MÓDULOS</span>
-              </div>
-              <div className="flex space-x-2">
-                <Can action="accion-crear-modulo">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Módulos y Permisos
+                </CardTitle>
+                <div className="flex items-center gap-2">
                   <Button
-                    onClick={() => {
-                      setEditingModulo(null);
-                      moduloForm.reset();
-                      setActiveTab("registro");
-                    }}
-                    className="bg-brand-lime hover:bg-brand-lime/90"
+                    onClick={handleRefresh}
+                    variant="outline"
                     size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
                   >
-                    Agregar Nuevo
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
                   </Button>
-                </Can>
+                  <Can action="accion-crear-modulo">
+                    <Button
+                      onClick={() => {
+                        setEditingModulo(null);
+                        moduloForm.reset();
+                        setActiveTab("registro");
+                      }}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nuevo Módulo
+                    </Button>
+                  </Can>
+                </div>
+              </div>
+            </CardHeader>
+
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar por nombre o descripción..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="active">Activos</SelectItem>
+                      <SelectItem value="inactive">Inactivos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            {/* Filtros y búsqueda */}
-            <div className="flex flex-wrap items-center gap-4 p-3 bg-cyan-50 rounded-lg mb-4 shadow-sm">
-              <div className="flex-1 min-w-[200px]">
-                <Input
-                  placeholder="Buscar por nombre o descripción..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full"
-                />
-              </div>
-              <div className="min-w-[180px]">
-                <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as "all" | "active" | "inactive")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="active">Solo activos</SelectItem>
-                    <SelectItem value="inactive">Solo inactivos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            <div className="p-6">
 
             {/* Tabla de módulos */}
             <div className="relative overflow-x-auto rounded-lg shadow-sm">
-              {isLoading && (
+              {(isLoading || isRefreshing) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
                   <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="animate-spin h-10 w-10 text-cyan-600" />
-                    <span className="text-cyan-700 font-semibold">Cargando módulos...</span>
+                    <Loader2 className="animate-spin h-10 w-10 text-teal-600" />
+                    <span className="text-gray-600 font-semibold">{isRefreshing ? 'Actualizando módulos...' : 'Cargando módulos...'}</span>
                   </div>
                 </div>
               )}
@@ -543,7 +579,7 @@ const PermisosPage: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!isLoading && (modulosFiltrados.length === 0 ? (
+                  {!(isLoading || isRefreshing) && (modulosFiltrados.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="h-24 text-center">
                         No hay módulos disponibles.
@@ -745,6 +781,7 @@ const PermisosPage: React.FC = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </div>
           </div>
         </TabsContent>

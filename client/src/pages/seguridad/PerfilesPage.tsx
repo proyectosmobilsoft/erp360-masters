@@ -579,8 +579,13 @@ const PerfilesPage = () => {
     }
   };
 
-  if (isLoading) {
-    return <div className="p-6">Cargando...</div>;
+  if (isLoading && !perfiles.length) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <span className="ml-2 text-gray-600">Cargando perfiles...</span>
+      </div>
+    );
   }
 
   return (

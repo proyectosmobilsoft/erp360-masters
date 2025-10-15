@@ -803,6 +803,7 @@ const UsuariosPage = () => {
                 </TableBody>
               </Table>
             </div>
+            </div>
           </div>
         </TabsContent>
 
