@@ -604,6 +604,7 @@ const UnidadServiciosPage: React.FC = () => {
                 </TableBody>
               </Table>
             </div>
+            </div>
           </div>
         </TabsContent>
 
