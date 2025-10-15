@@ -1,0 +1,575 @@
+================================================================================
+🎨 PROMPT PARA APLICAR DISEÑO UNIFORME TEAL-CYAN CON HEADER Y FILTROS MEJORADOS
+================================================================================
+
+Aplica el siguiente diseño uniforme a la página de gestión [NOMBRE_DE_LA_PÁGINA]:
+
+================================================================================
+1. AGREGAR IMPORTS NECESARIOS
+================================================================================
+
+Asegúrate de tener estos imports de lucide-react:
+
+import { UtensilsCrossed, RefreshCw, Plus, Search, Loader2 } from "lucide-react";
+
+
+================================================================================
+2. AGREGAR ESTADO PARA REFRESH
+================================================================================
+
+Dentro del componente principal, agrega:
+
+const [isRefreshing, setIsRefreshing] = useState(false);
+
+
+================================================================================
+3. AGREGAR FUNCIÓN handleRefresh
+================================================================================
+
+Antes del return, agrega esta función (ajusta el queryKey según tu caso):
+
+const handleRefresh = async () => {
+  setIsRefreshing(true);
+  try {
+    await queryClient.invalidateQueries({ queryKey: ['TU_QUERY_KEY_AQUI'] });
+    await queryClient.refetchQueries({ queryKey: ['TU_QUERY_KEY_AQUI'] });
+  } catch (error) {
+    console.error('Error al actualizar:', error);
+    toast({
+      title: '❌ Error al Actualizar',
+      description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+      variant: 'destructive',
+      className: "bg-red-50 border-red-200 text-red-800",
+    });
+  } finally {
+    setIsRefreshing(false);
+  }
+};
+
+⚠️ IMPORTANTE: Reemplaza 'TU_QUERY_KEY_AQUI' con el mismo query key que usas en tu useQuery.
+
+Ejemplos:
+- Si usas queryKey: ['usuarios'] → usa ['usuarios']
+- Si usas queryKey: ['roles'] → usa ['roles']
+- Si usas queryKey: ['productos'] → usa ['productos']
+
+
+================================================================================
+4. REEMPLAZAR EL CARDHEADER EXISTENTE
+================================================================================
+
+Reemplaza el header actual con este código:
+
+<CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+  <div className="flex items-center justify-between">
+    <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+      <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+      Gestión de [NOMBRE_DEL_MÓDULO]
+    </CardTitle>
+    <div className="flex items-center gap-2">
+      <Button
+        onClick={handleRefresh}
+        variant="outline"
+        size="sm"
+        disabled={isRefreshing}
+        className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+      >
+        <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+        Actualizar
+      </Button>
+      <Can action="accion-crear-[ENTIDAD]">
+        <Button
+          onClick={handleNuevo[Entidad]}
+          className="bg-teal-600 hover:bg-teal-700 text-white"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Nuevo [Nombre Singular]
+        </Button>
+      </Can>
+    </div>
+  </div>
+</CardHeader>
+
+
+================================================================================
+5. AGREGAR SECCIÓN DE FILTROS DESPUÉS DEL HEADER
+================================================================================
+
+Justo después del </CardHeader>, agrega:
+
+{/* Sección de Filtros */}
+<div className="p-4 bg-gray-50 border-b border-gray-200">
+  <div className="flex flex-col sm:flex-row gap-4">
+    <div className="flex-1">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Input
+          placeholder="Buscar por [campos relevantes]..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+    </div>
+    <div className="w-full sm:w-48">
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger>
+          <SelectValue placeholder="Filtrar por estado" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los estados</SelectItem>
+          <SelectItem value="active">Activos</SelectItem>
+          <SelectItem value="inactive">Inactivos</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  </div>
+</div>
+
+<CardContent className="p-6">
+  {/* Aquí continúa el contenido de la tabla */}
+
+
+================================================================================
+6. ACTUALIZAR EL LOADING DE LA TABLA
+================================================================================
+
+Reemplaza la lógica de loading en el TableBody con:
+
+<TableBody>
+  {(isLoading || isRefreshing) ? (
+    <TableRow>
+      <TableCell colSpan={[NÚMERO_DE_COLUMNAS]} className="h-24 text-center">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+          <span className="text-gray-600">
+            {isRefreshing ? 'Actualizando [entidades]...' : 'Cargando [entidades]...'}
+          </span>
+        </div>
+      </TableCell>
+    </TableRow>
+  ) : filteredData.length === 0 ? (
+    <TableRow>
+      <TableCell colSpan={[NÚMERO_DE_COLUMNAS]} className="h-24 text-center">
+        No hay [entidades] disponibles.
+      </TableCell>
+    </TableRow>
+  ) : (
+    {/* ... filas de datos ... */}
+  )}
+</TableBody>
+
+
+================================================================================
+7. PALETA DE COLORES ESPECÍFICA
+================================================================================
+
+- Gradiente header: from-teal-50 to-cyan-50
+- Borde header: border-teal-200
+- Título: text-teal-800
+- Icono título: text-teal-600
+- Botón Actualizar (outline): text-teal-600 hover:text-teal-700 hover:bg-teal-50
+- Botón principal: bg-teal-600 hover:bg-teal-700
+- Fondo filtros: bg-gray-50
+- Borde filtros: border-gray-200
+- Spinner: text-teal-600
+- Texto loading: text-gray-600
+
+
+================================================================================
+8. CHECKLIST DE IMPLEMENTACIÓN
+================================================================================
+
+□ Importar iconos: UtensilsCrossed, RefreshCw, Plus, Search, Loader2
+□ Agregar estado isRefreshing
+□ Crear función handleRefresh con el query key correcto
+□ Reemplazar header con diseño teal-cyan
+□ Agregar sección de filtros con fondo gris
+□ Actualizar loading de tabla con (isLoading || isRefreshing)
+□ Verificar que los colores sean consistentes
+□ Probar el botón Actualizar (debe deshabilitar, girar icono, mostrar loading en tabla)
+□ NO mostrar notificación de éxito al actualizar (solo de error)
+□ Verificar que compile sin errores: npm run build
+
+
+================================================================================
+9. EJEMPLO COMPLETO DE ESTRUCTURA
+================================================================================
+
+<Card className="bg-white shadow-lg border-0">
+  <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+        <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+        Gestión de [Módulo]
+      </CardTitle>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          disabled={isRefreshing}
+          className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
+        <Can action="accion-crear-[entidad]">
+          <Button
+            onClick={handleNueva[Entidad]}
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Nueva [Entidad]
+          </Button>
+        </Can>
+      </div>
+    </div>
+  </CardHeader>
+
+  {/* Sección de Filtros */}
+  <div className="p-4 bg-gray-50 border-b border-gray-200">
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+      <div className="w-full sm:w-48">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="inactive">Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  </div>
+
+  <CardContent className="p-6">
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader className="bg-cyan-50">
+          <TableRow className="text-center font-semibold text-gray-700">
+            <TableHead className="px-2 py-1 text-teal-600 w-20 text-center">Acciones</TableHead>
+            {/* ... más columnas ... */}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(isLoading || isRefreshing) ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+                  <span className="text-gray-600">
+                    {isRefreshing ? 'Actualizando datos...' : 'Cargando datos...'}
+                  </span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : filteredData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                No hay datos disponibles.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredData.map((item) => (
+              <TableRow key={item.id} className="hover:bg-gray-50">
+                {/* ... celdas ... */}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  </CardContent>
+</Card>
+
+
+================================================================================
+10. NOTAS IMPORTANTES
+================================================================================
+
+✓ El botón Actualizar NO debe mostrar notificación de éxito, solo de error
+✓ Los filtros deben ser responsivos: columna en móvil (flex-col), fila en desktop (sm:flex-row)
+✓ El Select de estado debe tener ancho fijo en desktop: w-full sm:w-48
+✓ El loading debe mostrar mensajes dinámicos según el estado
+✓ SIEMPRE verificar que el query key en handleRefresh coincida con el del useQuery
+✓ El icono UtensilsCrossed se usa en todos los headers para mantener consistencia
+✓ Cerrar correctamente todos los divs y CardContent tags
+
+
+================================================================================
+11. CASOS ESPECIALES
+================================================================================
+
+A) Si tu página tiene filtros adicionales (como filtro por perfil, categoría, etc.):
+   - Agrégalos después del filtro de estado
+   - Usa el mismo ancho: w-full sm:w-48
+   - Ejemplo:
+   
+   <div className="w-full sm:w-48">
+     <Select value={otroFiltro} onValueChange={setOtroFiltro}>
+       <SelectTrigger>
+         <SelectValue placeholder="Filtrar por..." />
+       </SelectTrigger>
+       <SelectContent>
+         <SelectItem value="all">Todos</SelectItem>
+         {/* ... opciones ... */}
+       </SelectContent>
+     </Select>
+   </div>
+
+B) Si tu tabla tiene loading overlay (absoluto) en lugar de fila:
+   
+   <div className="relative overflow-x-auto rounded-lg shadow-sm">
+     {(isLoading || isRefreshing) && (
+       <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+         <div className="flex flex-col items-center gap-2">
+           <Loader2 className="animate-spin h-10 w-10 text-teal-600" />
+           <span className="text-gray-600 font-semibold">
+             {isRefreshing ? 'Actualizando...' : 'Cargando...'}
+           </span>
+         </div>
+       </div>
+     )}
+     <Table>
+       {/* ... tabla ... */}
+     </Table>
+   </div>
+
+C) Si tu página tiene múltiples estados de loading (como isFiltering):
+   
+   {(isLoading || isFiltering || isRefreshing) ? (
+     <TableRow>
+       <TableCell colSpan={7} className="h-24 text-center">
+         <div className="flex items-center justify-center">
+           <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+           <span className="text-gray-600">
+             {isRefreshing ? 'Actualizando...' : 
+              (isFiltering ? 'Filtrando...' : 'Cargando...')}
+           </span>
+         </div>
+       </TableCell>
+     </TableRow>
+   ) : (
+     {/* ... datos ... */}
+   )}
+
+
+================================================================================
+12. ERRORES COMUNES A EVITAR
+================================================================================
+
+❌ ERROR: Query key diferente en useQuery y handleRefresh
+   useQuery usa: queryKey: ['usuarios']
+   handleRefresh usa: queryKey: ['users']
+   
+✅ CORRECTO: Usar el mismo query key en ambos lugares
+
+❌ ERROR: No cerrar correctamente los divs
+   <div className="p-6">
+     <Table>...</Table>
+   </div>
+   </div>  ← Falta este cierre
+   
+✅ CORRECTO: Cerrar todos los divs y CardContent
+
+❌ ERROR: Solo verificar isLoading en la tabla
+   {isLoading ? (<loading />) : (<datos />)}
+   
+✅ CORRECTO: Verificar ambos estados
+   {(isLoading || isRefreshing) ? (<loading />) : (<datos />)}
+
+❌ ERROR: Mostrar notificación de éxito al actualizar
+   toast({ title: '✅ Datos Actualizados' });
+   
+✅ CORRECTO: Solo mostrar error si falla, silencioso si es exitoso
+
+
+================================================================================
+13. REEMPLAZOS A REALIZAR
+================================================================================
+
+Busca y reemplaza estos valores:
+
+[NOMBRE_DE_LA_PÁGINA] → Nombre completo de tu página (ej: Categorías, Productos)
+[NOMBRE_DEL_MÓDULO] → Nombre para el título (ej: Gestión de Categorías)
+[TU_QUERY_KEY_AQUI] → El query key que usas (ej: 'categorias', 'productos')
+[ENTIDAD] → Nombre de la entidad en mayúsculas (ej: Categoria, Producto)
+[Entidad] → Nombre de la entidad capitalizado (ej: Categoria, Producto)
+[entidades] → Nombre de la entidad en plural minúsculas (ej: categorías, productos)
+[Nombre Singular] → Para el botón (ej: Nueva Categoría, Nuevo Producto)
+[campos relevantes] → Para el placeholder del buscador (ej: nombre, código)
+[NÚMERO_DE_COLUMNAS] → Número total de columnas en tu tabla (para colspan)
+
+
+================================================================================
+14. VALIDACIÓN FINAL
+================================================================================
+
+Antes de hacer commit, ejecuta:
+
+1. Verificar lints: 
+   - No debe haber errores de linter
+   
+2. Verificar compilación:
+   npm run build
+   - Debe completarse sin errores
+   
+3. Probar funcionalidad:
+   - Click en Actualizar → botón se deshabilita
+   - Icono de refresh gira durante la carga
+   - Tabla muestra spinner con mensaje "Actualizando..."
+   - Datos se recargan correctamente
+   - Botón se reactiva al terminar
+   - NO se muestra notificación de éxito
+
+
+================================================================================
+15. TEMPLATE COMPLETO COPY-PASTE
+================================================================================
+
+// 1. Imports
+import { UtensilsCrossed, RefreshCw, Plus, Search, Loader2 } from "lucide-react";
+
+// 2. Dentro del componente, agregar estado
+const [isRefreshing, setIsRefreshing] = useState(false);
+
+// 3. Función handleRefresh (antes del return)
+const handleRefresh = async () => {
+  setIsRefreshing(true);
+  try {
+    await queryClient.invalidateQueries({ queryKey: ['TU_QUERY_KEY'] });
+    await queryClient.refetchQueries({ queryKey: ['TU_QUERY_KEY'] });
+  } catch (error) {
+    console.error('Error al actualizar:', error);
+    toast({
+      title: '❌ Error al Actualizar',
+      description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+      variant: 'destructive',
+      className: "bg-red-50 border-red-200 text-red-800",
+    });
+  } finally {
+    setIsRefreshing(false);
+  }
+};
+
+// 4. Estructura del JSX
+<Card className="bg-white shadow-lg border-0">
+  <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+    <div className="flex items-center justify-between">
+      <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+        <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+        Gestión de [Módulo]
+      </CardTitle>
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={handleRefresh}
+          variant="outline"
+          size="sm"
+          disabled={isRefreshing}
+          className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualizar
+        </Button>
+        <Button
+          onClick={handleNuevo}
+          className="bg-teal-600 hover:bg-teal-700 text-white"
+        >
+          <Plus className="w-4 h-4 mr-1" />
+          Nuevo [Item]
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+
+  <div className="p-4 bg-gray-50 border-b border-gray-200">
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex-1">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <Input
+            placeholder="Buscar..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+      </div>
+      <div className="w-full sm:w-48">
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger>
+            <SelectValue placeholder="Filtrar por estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los estados</SelectItem>
+            <SelectItem value="active">Activos</SelectItem>
+            <SelectItem value="inactive">Inactivos</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  </div>
+
+  <CardContent className="p-6">
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader className="bg-cyan-50">
+          <TableRow className="text-center font-semibold text-gray-700">
+            <TableHead className="px-2 py-1 text-teal-600 w-20 text-center">Acciones</TableHead>
+            {/* más columnas */}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {(isLoading || isRefreshing) ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                <div className="flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin mr-2 text-teal-600" />
+                  <span className="text-gray-600">
+                    {isRefreshing ? 'Actualizando datos...' : 'Cargando datos...'}
+                  </span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : filteredData.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                No hay datos disponibles.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredData.map((item) => (
+              <TableRow key={item.id} className="hover:bg-gray-50">
+                {/* celdas de datos */}
+              </TableRow>
+            ))
+          )}
+        </TableBody>
+      </Table>
+    </div>
+  </CardContent>
+</Card>
+
+
+================================================================================
+FIN DEL PROMPT
+================================================================================
+
+Uso: Copia este prompt completo y ajusta los valores entre [CORCHETES] según 
+tu caso específico. Asegúrate de verificar especialmente el query key para que 
+el botón Actualizar funcione correctamente.
+
