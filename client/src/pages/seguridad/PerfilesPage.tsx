@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Plus, Edit, Trash2, X, ChevronDown, Eye, Settings, Building, Users, FileText, Award, BarChart, UserCheck, QrCode, Crown, Shield, Lock, CheckCircle, PackageOpen, Search, Filter } from "lucide-react";
+import { Plus, Edit, Trash2, X, ChevronDown, Eye, Settings, Building, Users, FileText, Award, BarChart, UserCheck, QrCode, Crown, Shield, Lock, CheckCircle, PackageOpen, Search, Filter, RefreshCw, Loader2, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -277,6 +277,7 @@ const PerfilesPage = () => {
   // Estados para filtros
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("active");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -560,6 +561,23 @@ const PerfilesPage = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['perfiles'] });
+      await queryClient.refetchQueries({ queryKey: ['perfiles'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (isLoading) {
     return <div className="p-6">Cargando...</div>;
@@ -593,75 +611,99 @@ const PerfilesPage = () => {
         <TabsContent value="perfiles" className="mt-6">
           {/* Header similar a la imagen */}
           <div className="bg-white rounded-lg border">
-            <div className="flex items-center justify-between p-4 border-b">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-orange-100 rounded flex items-center justify-center">
-                  <Crown className="w-5 h-5 text-orange-600" />
-                </div>
-                <span className="text-lg font-semibold text-gray-700">ROLES</span>
-              </div>
-              <div className="flex space-x-2">
-                <Can action="accion-crear-perfil">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+                  <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+                  Gestión de Perfiles
+                </CardTitle>
+                <div className="flex items-center gap-2">
                   <Button
-                    onClick={() => {
-                      setEditingPerfil(null);
-                      form.reset({
-                        codigo: perfiles.length + 1,
-                        nombre: "",
-                        descripcion: "",
-                        permisos: []
-                      });
-                      setActiveTab("vistas");
-                    }}
-                    className="bg-teal-400 hover:bg-teal-500 text-white text-xs px-3 py-1"
+                    onClick={handleRefresh}
+                    variant="outline"
                     size="sm"
+                    disabled={isRefreshing}
+                    className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
                   >
-                    Adicionar Registro
+                    <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Actualizar
                   </Button>
-                </Can>
-              </div>
-            </div>
-
-            {/* Filtros */}
-            <div className="p-4 border-b bg-gray-50">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Buscar por nombre o descripción..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                  <Can action="accion-crear-perfil">
+                    <Button
+                      onClick={() => {
+                        setEditingPerfil(null);
+                        form.reset({
+                          codigo: perfiles.length + 1,
+                          nombre: "",
+                          descripcion: "",
+                          permisos: []
+                        });
+                        setActiveTab("vistas");
+                      }}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-1" />
+                      Nuevo Perfil
+                    </Button>
+                  </Can>
                 </div>
+              </div>
+            </CardHeader>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filtrar por estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="active">Solo activos</SelectItem>
-                    <SelectItem value="inactive">Solo inactivos</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setSearchTerm("");
-                    setStatusFilter("active");
-                  }}
-                  className="flex items-center gap-2"
-                >
-                  <Filter className="w-4 h-4" />
-                  Limpiar filtros
-                </Button>
+            {/* Sección de Filtros */}
+            <div className="p-4 bg-gray-50 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Buscar por nombre o descripción..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+                <div className="w-full sm:w-48">
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filtrar por estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos los estados</SelectItem>
+                      <SelectItem value="active">Activos</SelectItem>
+                      <SelectItem value="inactive">Inactivos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("active");
+                    }}
+                    className="w-full sm:w-auto flex items-center gap-2"
+                  >
+                    <Filter className="w-4 h-4" />
+                    Limpiar filtros
+                  </Button>
+                </div>
               </div>
             </div>
+
+            <div className="p-6">
 
             {/* Tabla similar a la imagen */}
-            <div className="overflow-x-auto rounded-lg shadow-sm">
+            <div className="relative overflow-x-auto rounded-lg shadow-sm">
+              {(isLoading || isRefreshing) && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/70 z-20">
+                  <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="animate-spin h-10 w-10 text-teal-600" />
+                    <span className="text-gray-600 font-semibold">{isRefreshing ? 'Actualizando perfiles...' : 'Cargando perfiles...'}</span>
+                  </div>
+                </div>
+              )}
               <Table className="min-w-[800px] w-full text-xs">
                 <TableHeader className="bg-cyan-50">
                   <TableRow className="text-center font-semibold text-gray-700">
@@ -674,7 +716,7 @@ const PerfilesPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {!isLoading && (filteredPerfiles.length === 0 ? (
+                  {!(isLoading || isRefreshing) && (filteredPerfiles.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center">
                         No hay perfiles disponibles.
@@ -861,6 +903,7 @@ const PerfilesPage = () => {
                   ))}
                 </TableBody>
               </Table>
+            </div>
             </div>
           </div>
 

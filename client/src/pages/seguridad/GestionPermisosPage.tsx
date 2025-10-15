@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Shield, Settings, Eye } from "lucide-react";
+import { Loader2, Shield, Settings, Eye, RefreshCw, UtensilsCrossed } from "lucide-react";
 
 interface ViewAction {
   id: number;
@@ -35,6 +36,10 @@ const GestionPermisosPage: React.FC = () => {
   const [showMockData, setShowMockData] = useState(false);
   const [selectedActions, setSelectedActions] = useState<Set<number>>(new Set());
   const [showPermissionsTable, setShowPermissionsTable] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   // Query para obtener todas las vistas con sus acciones
   const { data: viewsWithActions, isLoading: viewsLoading } = useQuery<SystemView[]>({
@@ -307,44 +312,70 @@ const GestionPermisosPage: React.FC = () => {
     return colors[tipo] || 'bg-gray-100 text-gray-800';
   };
 
-  if (viewsLoading) {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['/api/views-with-actions'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/views-with-actions'] });
+    } catch (error) {
+      console.error('Error al actualizar:', error);
+      toast({
+        title: '❌ Error al Actualizar',
+        description: 'No se pudieron actualizar los datos. Intente nuevamente.',
+        variant: 'destructive',
+        className: "bg-red-50 border-red-200 text-red-800",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  if (viewsLoading || isRefreshing) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <span className="ml-2">Cargando vistas del sistema...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+        <span className="ml-2 text-gray-600">{isRefreshing ? 'Actualizando vistas del sistema...' : 'Cargando vistas del sistema...'}</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Shield className="h-6 w-6 text-brand-lime" />
-          <h1 className="text-3xl font-bold text-gray-800">Explorador de Vistas y Acciones</h1>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Sistema completo de permisos con {dataToUse.length} vistas y {dataToUse.reduce((sum, v) => sum + v.acciones.length, 0)} acciones totales organizadas por módulos.
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <label className="text-sm font-medium">Fuente de datos:</label>
-            <Select value={showMockData ? "mock" : "database"} onValueChange={(value) => setShowMockData(value === "mock")}>
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="database">Base de datos</SelectItem>
-                <SelectItem value="mock">Datos Mock</SelectItem>
-              </SelectContent>
-            </Select>
+    <div className="p-4 max-w-full mx-auto">
+      <Card className="bg-white shadow-lg border-0">
+        <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 border-b border-teal-200">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-bold text-teal-800 flex items-center gap-2">
+              <UtensilsCrossed className="w-6 h-6 text-teal-600" />
+              Explorador de Vistas y Acciones
+            </CardTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                size="sm"
+                disabled={isRefreshing}
+                className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
+              >
+                <RefreshCw className={`w-4 h-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
+              <Select value={showMockData ? "mock" : "database"} onValueChange={(value) => setShowMockData(value === "mock")}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="database">Base de datos</SelectItem>
+                  <SelectItem value="mock">Datos Mock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardHeader>
+        
+        <CardContent className="p-6 space-y-6">
+          <div className="text-sm text-gray-600">
+            Sistema completo de permisos con {dataToUse.length} vistas y {dataToUse.reduce((sum, v) => sum + v.acciones.length, 0)} acciones totales organizadas por módulos.
+          </div>
 
       {/* Tabla de Asignación de Permisos */}
       {dataToUse.length > 0 && (
@@ -477,6 +508,8 @@ const GestionPermisosPage: React.FC = () => {
           )}
         </Card>
       )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
