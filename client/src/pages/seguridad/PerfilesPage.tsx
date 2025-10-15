@@ -564,8 +564,8 @@ const PerfilesPage = () => {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries({ queryKey: ['perfiles'] });
-      await queryClient.refetchQueries({ queryKey: ['perfiles'] });
+      await queryClient.invalidateQueries({ queryKey: ['roles'] });
+      await queryClient.refetchQueries({ queryKey: ['roles'] });
     } catch (error) {
       console.error('Error al actualizar:', error);
       toast({
